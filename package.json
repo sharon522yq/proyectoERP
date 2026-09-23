@@ -1,0 +1,14 @@
+{
+  "name": "erp-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ERP modular multiplataforma — Fase 1 Core",
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "test:backend": "npm --prefix backend test"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ]
+}

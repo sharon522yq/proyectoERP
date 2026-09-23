@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: erp
+
+  backend:
+    build: ./backend
+    ports:
+      - "4000:4000"
+    environment:
+      # Desarrollo local: usa los valores por defecto de abajo.
+      # En producción define JWT_SECRET/JWT_REFRESH_SECRET fuertes (>= 32 chars)
+      # fuera del compose; el backend falla al arrancar si detecta los de desarrollo.
+      NODE_ENV: development
+      PORT: 4000
+      MONGODB_URI: mongodb://mongodb:27017/erp
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-32-chars-minimum}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-change-me-32-chars-min}
+      JWT_ACCESS_EXPIRES: 15m
+      JWT_REFRESH_EXPIRES_DAYS: 7
+      ALLOW_PRIVILEGED_REGISTER: ${ALLOW_PRIVILEGED_REGISTER:-false}
+      FRONTEND_URL: http://localhost:19006
+    depends_on:
+      - mongodb
+
+volumes:
+  mongo_data:

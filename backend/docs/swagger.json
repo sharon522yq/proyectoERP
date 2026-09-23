@@ -1,0 +1,715 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ERP Modular API",
+    "description": "API REST del Sistema ERP Modular Multiplataforma",
+    "version": "1.0.0",
+    "contact": { "name": "ERP Development Team" }
+  },
+  "servers": [
+    { "url": "http://localhost:4000", "description": "Desarrollo" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string" },
+          "code": { "type": "string" }
+        }
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": { "type": "array" },
+              "total": { "type": "integer" },
+              "page": { "type": "integer" },
+              "limit": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "BearerAuth": [] }],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "security": [],
+        "responses": { "200": { "description": "API funcionando" } }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Registrar usuario",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 6 },
+                  "role": { "type": "string", "default": "EMPLEADO" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Usuario registrado" },
+          "409": { "description": "Email ya registrado" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Iniciar sesión",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login exitoso" },
+          "401": { "description": "Credenciales inválidas" }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Renovar access token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Token renovado" },
+          "401": { "description": "Refresh token inválido" }
+        }
+      }
+    },
+    "/api/v1/crm/leads": {
+      "get": {
+        "tags": ["CRM"],
+        "summary": "Listar leads",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Lista de leads" } }
+      },
+      "post": {
+        "tags": ["CRM"],
+        "summary": "Crear lead",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "source": { "type": "string", "enum": ["WEB", "PHONE", "EMAIL", "REFERRAL", "SOCIAL", "EVENT", "OTHER"] },
+                  "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "URGENT"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Lead creado" } }
+      }
+    },
+    "/api/v1/crm/leads/{id}/convert": {
+      "post": {
+        "tags": ["CRM"],
+        "summary": "Convertir lead a customer",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Lead convertido" },
+          "400": { "description": "Lead ya convertido" }
+        }
+      }
+    },
+    "/api/v1/crm/customers": {
+      "get": {
+        "tags": ["CRM"],
+        "summary": "Listar customers",
+        "responses": { "200": { "description": "Lista de customers" } }
+      },
+      "post": {
+        "tags": ["CRM"],
+        "summary": "Crear customer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "type": { "type": "string", "enum": ["INDIVIDUAL", "BUSINESS"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Customer creado" } }
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Listar productos",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "categoryId", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Lista de productos" } }
+      },
+      "post": {
+        "tags": ["Products"],
+        "summary": "Crear producto",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sku", "name", "price"],
+                "properties": {
+                  "sku": { "type": "string" },
+                  "name": { "type": "string" },
+                  "price": { "type": "number" },
+                  "cost": { "type": "number" },
+                  "categoryId": { "type": "string" },
+                  "taxRate": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Producto creado" } }
+      }
+    },
+    "/api/v1/inventory/stock/adjust": {
+      "post": {
+        "tags": ["Inventory"],
+        "summary": "Ajustar stock",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["productId", "warehouseId", "quantity", "type"],
+                "properties": {
+                  "productId": { "type": "string" },
+                  "warehouseId": { "type": "string" },
+                  "quantity": { "type": "integer" },
+                  "type": { "type": "string", "enum": ["PURCHASE_ENTRY", "SALE_EXIT", "TRANSFER", "ADJUSTMENT", "RETURN", "INITIAL_STOCK"] },
+                  "reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Stock actualizado" },
+          "400": { "description": "Stock insuficiente" }
+        }
+      }
+    },
+    "/api/v1/sales/quotes": {
+      "get": {
+        "tags": ["Sales"],
+        "summary": "Listar cotizaciones",
+        "responses": { "200": { "description": "Lista de cotizaciones" } }
+      },
+      "post": {
+        "tags": ["Sales"],
+        "summary": "Crear cotización",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["customerId", "items"],
+                "properties": {
+                  "customerId": { "type": "string" },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "productId": { "type": "string" },
+                        "quantity": { "type": "integer" },
+                        "unitPrice": { "type": "number" },
+                        "taxRate": { "type": "number" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Cotización creada" } }
+      }
+    },
+    "/api/v1/sales/quotes/{id}/approve": {
+      "post": {
+        "tags": ["Sales"],
+        "summary": "Aprobar cotización",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Cotización aprobada" } }
+      }
+    },
+    "/api/v1/sales/quotes/{quoteId}/order": {
+      "post": {
+        "tags": ["Sales"],
+        "summary": "Convertir cotización en pedido",
+        "parameters": [
+          { "name": "quoteId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "201": { "description": "Pedido creado" } }
+      }
+    },
+    "/api/v1/sales/orders/{orderId}/invoice": {
+      "post": {
+        "tags": ["Sales"],
+        "summary": "Crear factura desde pedido",
+        "parameters": [
+          { "name": "orderId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "201": { "description": "Factura creada" } }
+      }
+    },
+    "/api/v1/sales/invoices/{invoiceId}/payments": {
+      "post": {
+        "tags": ["Sales"],
+        "summary": "Registrar pago",
+        "parameters": [
+          { "name": "invoiceId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["amount", "method"],
+                "properties": {
+                  "amount": { "type": "number" },
+                  "method": { "type": "string", "enum": ["CASH", "CARD", "TRANSFER", "CHECK", "OTHER"] },
+                  "reference": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Pago registrado" } }
+      }
+    },
+    "/api/v1/purchases": {
+      "get": {
+        "tags": ["Purchases"],
+        "summary": "Listar órdenes de compra",
+        "responses": { "200": { "description": "Lista de órdenes" } }
+      },
+      "post": {
+        "tags": ["Purchases"],
+        "summary": "Crear orden de compra",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["supplierId", "items"],
+                "properties": {
+                  "supplierId": { "type": "string" },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "productId": { "type": "string" },
+                        "quantity": { "type": "integer" },
+                        "unitCost": { "type": "number" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Orden creada" } }
+      }
+    },
+    "/api/v1/finance/accounts": {
+      "get": {
+        "tags": ["Finance"],
+        "summary": "Listar cuentas",
+        "responses": { "200": { "description": "Lista de cuentas" } }
+      },
+      "post": {
+        "tags": ["Finance"],
+        "summary": "Crear cuenta",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code", "name", "type"],
+                "properties": {
+                  "code": { "type": "string" },
+                  "name": { "type": "string" },
+                  "type": { "type": "string", "enum": ["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Cuenta creada" } }
+      }
+    },
+    "/api/v1/finance/summary": {
+      "get": {
+        "tags": ["Finance"],
+        "summary": "Resumen financiero",
+        "responses": { "200": { "description": "Resumen" } }
+      }
+    },
+    "/api/v1/hr/employees": {
+      "get": {
+        "tags": ["HR"],
+        "summary": "Listar empleados",
+        "responses": { "200": { "description": "Lista de empleados" } }
+      },
+      "post": {
+        "tags": ["HR"],
+        "summary": "Crear empleado",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["employeeId", "name"],
+                "properties": {
+                  "employeeId": { "type": "string" },
+                  "name": { "type": "string" },
+                  "departmentId": { "type": "string" },
+                  "position": { "type": "string" },
+                  "salary": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Empleado creado" } }
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "Listar proyectos",
+        "responses": { "200": { "description": "Lista de proyectos" } }
+      },
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Crear proyecto",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "budget": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Proyecto creado" } }
+      }
+    },
+    "/api/v1/production/bom": {
+      "get": {
+        "tags": ["Production"],
+        "summary": "Listar BOMs",
+        "responses": { "200": { "description": "Lista de BOMs" } }
+      },
+      "post": {
+        "tags": ["Production"],
+        "summary": "Crear BOM",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["productId", "name", "items"],
+                "properties": {
+                  "productId": { "type": "string" },
+                  "name": { "type": "string" },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "componentProductId": { "type": "string" },
+                        "quantity": { "type": "number" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "BOM creada" } }
+      }
+    },
+    "/api/v1/production/orders": {
+      "get": {
+        "tags": ["Production"],
+        "summary": "Listar órdenes de producción",
+        "responses": { "200": { "description": "Lista de órdenes" } }
+      },
+      "post": {
+        "tags": ["Production"],
+        "summary": "Crear orden de producción",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["productId", "bomId", "warehouseId", "quantity"],
+                "properties": {
+                  "productId": { "type": "string" },
+                  "bomId": { "type": "string" },
+                  "warehouseId": { "type": "string" },
+                  "quantity": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Orden creada" } }
+      }
+    },
+    "/api/v1/production/orders/{id}/status": {
+      "put": {
+        "tags": ["Production"],
+        "summary": "Actualizar estado de orden de producción",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": { "type": "string", "enum": ["PLANNED", "RELEASED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Estado actualizado" } }
+      }
+    },
+    "/api/v1/production/orders/{productionOrderId}/consume": {
+      "post": {
+        "tags": ["Production"],
+        "summary": "Consumir materiales de producción",
+        "parameters": [
+          { "name": "productionOrderId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Materiales consumidos" } }
+      }
+    },
+    "/api/v1/production/orders/{productionOrderId}/complete": {
+      "post": {
+        "tags": ["Production"],
+        "summary": "Completar producción",
+        "parameters": [
+          { "name": "productionOrderId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Producción completada" } }
+      }
+    },
+    "/api/v1/ai/chat": {
+      "post": {
+        "tags": ["IA"],
+        "summary": "Asistente ERP (chat con tools autorizadas)",
+        "description": "Selecciona una herramienta autorizada por RBAC, la ejecuta con el companyId del contexto JWT y sintetiza la respuesta. Requiere permiso ai.chat. Rate limit específico (AI_RATE_LIMIT) + techos diarios por usuario/empresa.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["question"],
+                "properties": {
+                  "question": { "type": "string", "minLength": 2, "maxLength": 2000 },
+                  "sessionId": { "type": "string", "maxLength": 64 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Respuesta del asistente" },
+          "400": { "description": "Validación / parámetros de tool inválidos", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "No autenticado" },
+          "403": { "description": "Sin permiso ai.chat o tool no autorizada (AI_UNAUTHORIZED_TOOL)" },
+          "429": { "description": "Rate limit IA o límite diario" },
+          "501": { "description": "IA deshabilitada (AI_ENABLED=false)" },
+          "502": { "description": "Respuesta inválida del proveedor (AI_INVALID_RESPONSE / AI_PROVIDER_ERROR)" },
+          "504": { "description": "Timeout del proveedor (AI_TIMEOUT)" }
+        }
+      }
+    },
+    "/api/v1/ai/analyze": {
+      "post": {
+        "tags": ["IA"],
+        "summary": "Análisis empresarial estructurado (JSON)",
+        "description": "Recopila datos de las herramientas permitidas y genera {type, summary, findings, recommendations, confidence}. Requiere permiso ai.analyze. Nunca modifica datos.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "scope": { "type": "string", "maxLength": 200 } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Análisis estructurado" },
+          "403": { "description": "Sin permiso ai.analyze o sin acceso a datos (AI_NO_ACCESS)" },
+          "429": { "description": "Rate limit IA o límite diario" },
+          "502": { "description": "Análisis inválido del proveedor" },
+          "504": { "description": "Timeout del proveedor" }
+        }
+      }
+    },
+    "/api/v1/ai/health": {
+      "get": {
+        "tags": ["IA"],
+        "summary": "Estado del proveedor IA (sin secretos)",
+        "description": "Devuelve enabled/provider/model/configured y los límites vigentes. Nunca expone API keys ni URLs internas. Requiere permiso ai.read.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Estado del proveedor" },
+          "401": { "description": "No autenticado" },
+          "403": { "description": "Sin permiso ai.read" }
+        }
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Dashboard completo",
+        "responses": { "200": { "description": "Datos del dashboard" } }
+      }
+    },
+    "/api/v1/dashboard/sales": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Resumen de ventas",
+        "responses": { "200": { "description": "Resumen" } }
+      }
+    },
+    "/api/v1/dashboard/inventory": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Resumen de inventario",
+        "responses": { "200": { "description": "Resumen" } }
+      }
+    },
+    "/api/v1/dashboard/finance": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Resumen financiero",
+        "responses": { "200": { "description": "Resumen" } }
+      }
+    },
+    "/api/v1/dashboard/production": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Resumen de producción",
+        "responses": { "200": { "description": "Resumen" } }
+      }
+    }
+  }
+}
