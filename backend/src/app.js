@@ -116,6 +116,7 @@ function createApp() {
 
   // FASE 12 — IA (desacoplada por adapter; 501 AI_DISABLED si AI_ENABLED=false)
   app.use('/api/v1/ai', aiRoutes);
+  app.use('/api/ai', aiRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

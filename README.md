@@ -84,15 +84,15 @@ npm test
 npm run dev
 ```
 
-### Docker
+### Frontend (React Native + Web)
 
 ```bash
-docker-compose up -d
+cd frontend
+npm install
+npm run web
+# O para iniciar Expo en desarrollo móvil:
+npm start
 ```
-
-Esto inicia:
-- MongoDB en puerto 27017
-- Backend en puerto 4000
 
 ## Variables de Entorno
 
