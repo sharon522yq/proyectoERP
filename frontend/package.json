@@ -1,12 +1,16 @@
 {
   "name": "erp-frontend",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "ERP frontend — React Native + Web (Fase 1: Auth + navegación por rol)",
+  "description": "ERP frontend — React Native + Web (Expo)",
   "main": "App.js",
   "scripts": {
     "start": "expo start",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "android": "expo run:android",
+    "prebuild:android": "npx expo prebuild --platform android --clean",
+    "export:web": "npx expo export --platform web",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",

@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "NexusERP",
+    "slug": "nexus-erp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "nexuserp",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#4f46e5"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nexuserp.erp"
+    },
+    "android": {
+      "package": "com.nexuserp.erp"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": []
+  }
+}

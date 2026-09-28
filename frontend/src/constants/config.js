@@ -1,5 +1,7 @@
+import { Platform } from 'react-native';
+
 export const ERP_NAME = 'NexusERP';
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://10.0.2.2:4000/api/v1' : 'http://localhost:4000/api/v1');
 
 export const MENU_BY_PERMISSION = [
   { label: 'Dashboard', route: 'dashboard', permission: null, icon: 'dashboard' },
