@@ -1,3 +1,4 @@
+import { registerRootComponent } from 'expo';
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useAuth, AuthProvider } from './src/context/AuthContext';
@@ -27,3 +28,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc'
   }
 });
+
+registerRootComponent(App);
