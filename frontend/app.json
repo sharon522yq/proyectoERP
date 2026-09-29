@@ -6,10 +6,6 @@
     "orientation": "portrait",
     "scheme": "nexuserp",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#4f46e5"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nexuserp.erp"
