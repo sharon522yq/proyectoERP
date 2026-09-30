@@ -2,9 +2,9 @@ FROM node:20-alpine AS base
 
 WORKDIR /app
 
-COPY backend/package*.json ./
+COPY backend/package.json ./
 
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 COPY backend/src/ ./src/
 COPY backend/docs/ ./docs/
