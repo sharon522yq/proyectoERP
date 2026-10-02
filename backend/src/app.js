@@ -69,6 +69,16 @@ function createApp() {
   });
   app.use(limiter);
 
+  // Endpoint raíz para diagnóstico del despliegue (evita un NOT_FOUND ambiguo en Render).
+  app.get('/', (req, res) => res.json({
+    success: true,
+    service: 'erp-backend',
+    version: appVersion,
+    status: 'online',
+    health: '/health',
+    docs: '/docs'
+  }));
+
   app.get('/health', (req, res) => res.json({ success: true, service: 'erp-backend', version: appVersion }));
 
   // Swagger docs
