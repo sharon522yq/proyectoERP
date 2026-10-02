@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "android": "expo run:android",
     "prebuild:android": "npx expo prebuild --platform android --clean",
-    "export:web": "npx expo export --platform web",
+    "export:web": "expo export --platform web --output-dir dist --clear",
+    "deploy:cloudflare": "npx --yes wrangler@4 deploy",
     "ios": "expo run:ios"
   },
   "dependencies": {
