@@ -16,7 +16,7 @@ const authenticate = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, 'Sesión inválida o expirada', 'AUTH_INVALID');
   }
   const role = await roleService.findByName(user.role);
-  req.user = { id: String(user._id), role: user.role, companyId: user.companyId ? String(user.companyId) : null, permissions: role ? role.permissions : [] };
+  req.user = { id: String(user._id), role: user.role, companyId: user.companyId ? String(user.companyId) : null, permissions: role ? role.permissions.filter(p => (payload.permissions || []).includes('*') || (payload.permissions || []).includes(p)) : [] };
   return next();
 });
 
