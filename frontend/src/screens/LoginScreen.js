@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,10 @@ export default function LoginScreen() {
   const { login } = useAuth();
   const initialToken = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('resetToken') || '' : '';
   const [mode, setMode] = useState(initialToken ? 'reset' : 'login');
+  const [setupAvailable, setSetupAvailable] = useState(false);
+  const [companyName, setCompanyName] = useState('');
+  const [setupCode, setSetupCode] = useState('');
+  useEffect(() => { authApi.setupStatus().then(r => setSetupAvailable(r.available)).catch(() => {}); }, []);
   const [name, setName] = useState('');
   const [token, setToken] = useState(initialToken);
   const [confirmation, setConfirmation] = useState('');
@@ -25,14 +29,17 @@ export default function LoginScreen() {
       setError('Introduce un correo electrónico válido'); return;
     }
     if (mode !== 'forgot' && !password) { setError('Introduce tu contraseña'); return; }
-    if (mode === 'register' && name.trim().length < 2) { setError('Introduce tu nombre completo'); return; }
-    if (['register', 'reset'].includes(mode) && (password.length < 8 || password.length > 100 || password !== confirmation)) {
+    if (['register', 'setup'].includes(mode) && name.trim().length < 2) { setError('Introduce tu nombre completo'); return; }
+    if (['register', 'reset', 'setup'].includes(mode) && (password.length < 8 || password.length > 100 || password !== confirmation)) {
       setError('La contraseña debe tener entre 8 y 100 caracteres y coincidir con la confirmación'); return;
     }
     if (mode === 'reset' && !token.trim()) { setError('Introduce el código del enlace de recuperación'); return; }
     try {
       setError(''); setMessage(''); setLoading(true);
-      if (mode === 'login') await login(email.trim(), password);
+      if (mode === 'setup') {
+        await authApi.setup({ name: name.trim(), email: email.trim(), password, companyName: companyName.trim() }, setupCode.trim());
+        setSetupAvailable(false); await login(email.trim(), password);
+      } else if (mode === 'login') await login(email.trim(), password);
       else if (mode === 'register') {
         await authApi.register({ name: name.trim(), email: email.trim(), password });
         await login(email.trim(), password);
@@ -64,8 +71,14 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>{({ login: 'Iniciar sesión', register: 'Crear cuenta', forgot: 'Recuperar contraseña', reset: 'Restablecer contraseña' })[mode]}</Text>
-          {mode === 'register' && <View style={styles.inputGroup}>
+          {mode === 'setup' && <>
+            <Text style={styles.label}>Empresa</Text>
+            <TextInput style={styles.input} value={companyName} onChangeText={setCompanyName} editable={!loading} />
+            <Text style={styles.label}>Código de configuración proporcionado por el responsable</Text>
+            <TextInput style={styles.input} value={setupCode} onChangeText={setSetupCode} secureTextEntry editable={!loading} />
+          </>}
+          <Text style={styles.label}>{({ setup: 'Configurar empresa y administrador', login: 'Iniciar sesión', register: 'Crear cuenta', forgot: 'Recuperar contraseña', reset: 'Restablecer contraseña' })[mode]}</Text>
+          {['register', 'setup'].includes(mode) && <View style={styles.inputGroup}>
             <Text style={styles.label}>Nombre completo</Text>
             <TextInput style={styles.input} value={name} onChangeText={setName} maxLength={120} editable={!loading} />
           </View>}
@@ -100,7 +113,7 @@ export default function LoginScreen() {
               onSubmitEditing={submit}
             />
           </View>}
-          {['register', 'reset'].includes(mode) && <View style={styles.inputGroup}>
+          {['register', 'reset', 'setup'].includes(mode) && <View style={styles.inputGroup}>
             <Text style={styles.label}>Confirmar contraseña</Text>
             <TextInput style={styles.input} value={confirmation} onChangeText={setConfirmation} secureTextEntry editable={!loading} onSubmitEditing={submit} />
           </View>}
@@ -108,9 +121,9 @@ export default function LoginScreen() {
           {!!error && <Text style={styles.error}>{error}</Text>}
 
           <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={submit} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{({ login: 'Iniciar sesión', register: 'Crear cuenta', forgot: 'Enviar enlace', reset: 'Guardar contraseña' })[mode]}</Text>}
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{({ setup: 'Configurar empresa y administrador', login: 'Iniciar sesión', register: 'Crear cuenta', forgot: 'Enviar enlace', reset: 'Guardar contraseña' })[mode]}</Text>}
           </TouchableOpacity>
-          {(mode === 'login' ? [['register', 'Crear cuenta'], ['forgot', '¿Olvidaste tu contraseña?']] : [['login', 'Volver a iniciar sesión'], ...(mode === 'forgot' ? [['reset', 'Ya tengo un código de recuperación']] : [])]).map(([next, label]) => (
+          {(mode === 'login' ? [['register', 'Crear cuenta'], ['forgot', '¿Olvidaste tu contraseña?'], ...(setupAvailable ? [['setup', 'Configurar primera empresa']] : [])] : [['login', 'Volver a iniciar sesión'], ...(mode === 'forgot' ? [['reset', 'Ya tengo un código de recuperación']] : [])]).map(([next, label]) => (
             <TouchableOpacity key={next} onPress={() => switchMode(next)} disabled={loading} accessibilityRole="button">
               <Text style={[styles.label, { color: tokens.colors.primary, textAlign: 'center' }]}>{label}</Text>
             </TouchableOpacity>

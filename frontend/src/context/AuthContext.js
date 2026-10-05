@@ -11,18 +11,21 @@ const STORAGE_KEYS = {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [permissions, setPermissions] = useState([]);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Restaurar usuario guardado si existe token de acceso
-    const access = getStoredToken('erp_access_token');
-    if (access) {
-      try {
-        const savedUser = getStoredToken(STORAGE_KEYS.USER);
-        const savedPerms = getStoredToken(STORAGE_KEYS.PERMISSIONS);
-        if (savedUser) setUser(JSON.parse(savedUser));
-        if (savedPerms) setPermissions(JSON.parse(savedPerms));
-      } catch {}
-    }
+    let mounted = true;
+    (async () => {
+      const access = getStoredToken('erp_access_token');
+      if (access) {
+        try {
+          const data = await authApi.me();
+          if (mounted) { setUser(data.user); setPermissions(data.permissions || []); }
+        } catch { setAccessToken(null); setRefreshToken(null); }
+      }
+      if (mounted) setReady(true);
+    })();
+    return () => { mounted = false; };
   }, []);
 
   if (typeof setOnUnauthorized === 'function') {
@@ -35,7 +38,7 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(() => ({
-    user, permissions,
+    user, permissions, ready,
     has: (p) => permissions.includes('*') || permissions.includes(p),
     login: async (email, password) => {
       const data = await authApi.login(email, password);
@@ -55,7 +58,7 @@ export function AuthProvider({ children }) {
       setStoredToken(STORAGE_KEYS.USER, null);
       setStoredToken(STORAGE_KEYS.PERMISSIONS, null);
     }
-  }), [user, permissions]);
+  }), [user, permissions, ready]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

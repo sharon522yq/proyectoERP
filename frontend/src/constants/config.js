@@ -6,7 +6,7 @@ const DEVELOPMENT_API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:4000/ap
 
 // EXPO_PUBLIC_API_URL debe configurarse en Cloudflare/EAS para despliegues controlados.
 // El fallback de producción evita que una build publicada intente conectarse a localhost.
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? DEVELOPMENT_API_URL : PRODUCTION_API_URL);
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL || (process.env.EXPO_PUBLIC_USE_LOCAL_API === 'true' ? DEVELOPMENT_API_URL : PRODUCTION_API_URL)).replace(/\/+$/, '');
 
 export const MENU_BY_PERMISSION = [
   { label: 'Dashboard', route: 'dashboard', permission: null, icon: 'dashboard' },
