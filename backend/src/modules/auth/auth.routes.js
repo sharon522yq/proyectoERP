@@ -14,12 +14,12 @@ const loginLimiter = rateLimit({
 });
 
 const router = Router();
-router.post('/register', v.registerRules, validate, controller.register);
+router.post('/register', loginLimiter, v.registerRules, validate, controller.register);
 router.post('/login', loginLimiter, v.loginRules, validate, controller.login);
 router.post('/refresh', v.refreshRules, validate, controller.refresh);
 router.post('/logout', authenticate, controller.logout);
 router.post('/change-password', authenticate, v.changeRules, validate, controller.changePassword);
-router.post('/forgot-password', v.forgotRules, validate, controller.forgotPassword);
-router.post('/reset-password', v.resetRules, validate, controller.resetPassword);
+router.post('/forgot-password', loginLimiter, v.forgotRules, validate, controller.forgotPassword);
+router.post('/reset-password', loginLimiter, v.resetRules, validate, controller.resetPassword);
 
 module.exports = router;

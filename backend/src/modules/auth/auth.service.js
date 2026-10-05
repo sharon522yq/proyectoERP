@@ -1,3 +1,4 @@
+const { sendPasswordReset } = require('../../utils/passwordResetMail');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -113,18 +114,22 @@ async function changePassword(userId, currentPassword, newPassword) {
 
 async function forgotPassword(email) {
   const user = await userRepo.findByEmail(String(email).toLowerCase());
-  if (!user) return { ok: true };
+  if (!user || !user.active) return { ok: true };
   const token = crypto.randomBytes(32).toString('hex');
   await userRepo.update(user._id, { resetTokenHash: sha256(token), resetExpires: new Date(Date.now() + 3600e3) });
-  if (env.env === 'production') return { ok: true };
+  await sendPasswordReset(user.email, token);
+  if (env.env !== 'test') return { ok: true };
   return { ok: true, resetToken: token };
 }
 
 async function resetPassword(token, newPassword) {
   const hash = sha256(token);
-  const user = await User.findOne({ resetTokenHash: hash, resetExpires: { $gt: new Date() } }).select('+resetTokenHash +resetExpires');
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  const user = await User.findOneAndUpdate(
+    { resetTokenHash: hash, resetExpires: { $gt: new Date() }, active: true },
+    { $set: { passwordHash, refreshTokenHash: null }, $unset: { resetTokenHash: '', resetExpires: '' } }
+  );
   if (!user) throw new ApiError(400, 'Token inválido o expirado', 'INVALID_RESET');
-  await userRepo.update(user._id, { passwordHash: await bcrypt.hash(newPassword, 12), resetTokenHash: undefined, resetExpires: undefined, refreshTokenHash: null });
   return { ok: true };
 }
 
