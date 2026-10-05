@@ -9,7 +9,7 @@
  *   - Compra recibida   → entrada de stock (PURCHASE_ORDER) + Cuentas por Pagar
  * y las matrices de transición de estado (D-007).
  */
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -26,7 +26,7 @@ let productId, warehouseId, customerId, supplierBId;
 let orderIdA, invoiceIdA, purchaseOrderA;
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();

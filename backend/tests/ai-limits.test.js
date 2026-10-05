@@ -2,7 +2,7 @@
  * FASE 12 — Control de coste: límites diarios por usuario/empresa y kill-switch.
  * Los límites se leen de env.ai en cada llamada (mutables en runtime para el test).
  */
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -15,7 +15,7 @@ let mongo, app, token;
 const stamp = Date.now();
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();
