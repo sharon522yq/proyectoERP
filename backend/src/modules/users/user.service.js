@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const Company = require('../companies/company.model');
 const repo = require('./user.repository');
 const roleService = require('../roles/role.service');
 const { ApiError } = require('../../utils/ApiError');
@@ -29,7 +30,7 @@ async function list(ctx) {
 async function getById(id, ctx) {
   const user = await repo.findById(id);
   if (!user) throw new ApiError(404, 'Usuario no encontrado', 'USER_NOT_FOUND');
-  if (ctx.companyId && user.companyId && String(user.companyId) !== String(ctx.companyId)) {
+  if (ctx.companyId && String(user.companyId || '') !== String(ctx.companyId)) {
     throw new ApiError(403, 'Acceso denegado a otra empresa', 'CROSS_COMPANY');
   }
   return user.toSafeJSON();
@@ -38,21 +39,32 @@ async function getById(id, ctx) {
 async function update(id, data, ctx) {
   const prev = await repo.findById(id);
   if (!prev) throw new ApiError(404, 'Usuario no encontrado', 'USER_NOT_FOUND');
-  if (ctx.companyId && prev.companyId && String(prev.companyId) !== String(ctx.companyId)) {
+  if (ctx.companyId && String(prev.companyId || '') !== String(ctx.companyId)) {
     throw new ApiError(403, 'Acceso denegado a otra empresa', 'CROSS_COMPANY');
+  }
+  if (data.companyId !== undefined) {
+    if (ctx.role !== 'ADMIN' || ctx.companyId) {
+      throw new ApiError(403, 'La asignación requiere un administrador global', 'COMPANY_ASSIGN_FORBIDDEN');
+    }
+    if (prev.companyId && String(prev.companyId) !== String(data.companyId)) {
+      throw new ApiError(409, 'No se permite transferir usuarios entre empresas', 'COMPANY_TRANSFER_FORBIDDEN');
+    }
+    const company = await Company.findById(data.companyId);
+    if (!company || !company.active) throw new ApiError(400, 'Empresa inválida o inactiva', 'INVALID_COMPANY');
   }
   // Whitelist: solo campos permitidos
   const safe = {};
   for (const key of ALLOWED_UPDATE_FIELDS) {
     if (data[key] !== undefined) safe[key] = data[key];
   }
+  if (data.companyId !== undefined) { safe.companyId = data.companyId; safe.refreshTokenHash = null; }
   if (safe.role) {
     const role = await roleService.findByName(String(safe.role).toUpperCase());
     if (!role) throw new ApiError(400, 'Rol inválido', 'INVALID_ROLE');
     safe.role = role.name;
   }
   const updated = await repo.update(id, safe);
-  await logAudit({ userId: ctx.userId, companyId: prev.companyId, action: 'UPDATE', module: 'users', documentId: id, previousData: { name: prev.name, role: prev.role }, newData: safe, ip: ctx.ip });
+  await logAudit({ userId: ctx.userId, companyId: prev.companyId, action: 'UPDATE', module: 'users', documentId: id, previousData: { name: prev.name, role: prev.role, companyId: prev.companyId }, newData: { name: safe.name, role: safe.role, active: safe.active, companyId: safe.companyId }, ip: ctx.ip });
   return updated.toSafeJSON();
 }
 
@@ -60,7 +72,7 @@ async function remove(id, ctx) {
   const prev = await repo.findById(id);
   if (!prev) throw new ApiError(404, 'Usuario no encontrado', 'USER_NOT_FOUND');
   if (String(prev._id) === String(ctx.userId)) throw new ApiError(400, 'No puedes desactivarte a ti mismo', 'SELF_DELETE');
-  if (ctx.companyId && prev.companyId && String(prev.companyId) !== String(ctx.companyId)) {
+  if (ctx.companyId && String(prev.companyId || '') !== String(ctx.companyId)) {
     throw new ApiError(403, 'Acceso denegado a otra empresa', 'CROSS_COMPANY');
   }
   await repo.update(id, { active: false });
