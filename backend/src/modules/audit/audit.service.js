@@ -1,7 +1,7 @@
 const Audit = require('./audit.model');
 
-async function list({ companyId, module, page = 1, limit = 20 }) {
-  const filter = {};
+async function list({ companyId, global, module, page = 1, limit = 20 }) {
+  const filter = global && !companyId ? {} : { companyId: companyId || null };
   if (companyId) filter.companyId = companyId;
   if (module) filter.module = module;
   const skip = (page - 1) * limit;

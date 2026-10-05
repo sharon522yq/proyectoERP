@@ -1,3 +1,4 @@
+const { pick } = require('../../utils/companyAccess');
 const repo = require('./branch.repository');
 const { ApiError } = require('../../utils/ApiError');
 const { logAudit } = require('../../middlewares/audit');
@@ -20,6 +21,7 @@ async function create(data, ctx) {
 async function list(ctx) {
   const companyId = ctx.companyId || ctx.queryCompanyId;
   if (!companyId) throw new ApiError(400, 'companyId requerido', 'VALIDATION_ERROR');
+  assertSameCompany(ctx.companyId, companyId, ctx.permissions.includes('*'));
   return repo.listByCompany(companyId);
 }
 
@@ -36,7 +38,7 @@ async function update(id, data, ctx) {
   if (!prev) throw new ApiError(404, 'Sucursal no encontrada', 'BRANCH_NOT_FOUND');
   const isSuper = ctx.permissions.includes('*');
   assertSameCompany(ctx.companyId, prev.companyId, isSuper);
-  const updated = await repo.update(id, data);
+  const updated = await repo.update(id, pick(data, ['name', 'address', 'active']));
   await logAudit({ userId: ctx.userId, companyId: prev.companyId, action: 'UPDATE', module: 'branches', documentId: id, previousData: prev.toObject(), newData: data, ip: ctx.ip });
   return updated;
 }
