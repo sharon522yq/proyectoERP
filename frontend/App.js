@@ -3,11 +3,14 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useAuth, AuthProvider } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
+import PendingCompanyScreen from './src/screens/PendingCompanyScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 
 function Root() {
   const { user } = useAuth();
-  return user ? <DashboardScreen /> : <LoginScreen />;
+  if (!user) return <LoginScreen />;
+  if (user.role === 'EMPLEADO' && !user.companyId) return <PendingCompanyScreen />;
+  return <DashboardScreen />;
 }
 
 export default function App() {

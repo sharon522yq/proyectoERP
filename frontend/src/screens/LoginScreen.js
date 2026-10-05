@@ -6,7 +6,7 @@ import { tokens } from '../theme/tokens';
 import AppWordmark from '../components/branding/AppWordmark';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const initialToken = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('resetToken') || '' : '';
   const [mode, setMode] = useState(initialToken ? 'reset' : 'login');
   const [name, setName] = useState('');
@@ -34,8 +34,7 @@ export default function LoginScreen() {
       setError(''); setMessage(''); setLoading(true);
       if (mode === 'login') await login(email.trim(), password);
       else if (mode === 'register') {
-        await authApi.register({ name: name.trim(), email: email.trim(), password });
-        await login(email.trim(), password);
+        await register({ name: name.trim(), email: email.trim(), password });
       } else if (mode === 'forgot') {
         await authApi.forgotPassword(email.trim());
         setMessage('Si el correo corresponde a una cuenta activa, recibirás un enlace válido durante una hora. Revisa también spam.');
