@@ -3,7 +3,8 @@
 .idea
 node_modules
 **/node_modules
-frontend
+frontend/*
+!frontend/package.json
 coverage
 *.log
 .env

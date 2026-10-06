@@ -176,7 +176,7 @@ curl -I https://proyectoerp-api.onrender.com/
 |---|---|---|
 | Render muestra el commit viejo | Rama o PR sin publicar | Subir/mezclar a `main` y desplegar de nuevo |
 | Build falla en `COPY backend/...` | Root Directory incorrecto | Dejarlo vacío y usar contexto `.` |
-| Build falla en `npm ci` | Lockfile no llegó a GitHub | Confirmar `backend/package-lock.json` en `main` |
+| Build falla en `npm ci` | Lockfile no llegó a GitHub | Confirmar `package-lock.json` en `main` |
 | Arranque falla por JWT | Secretos ausentes/cortos/iguales | Corregir ambos secretos en Environment |
 | Arranque falla conectando MongoDB | URI, usuario o Network Access | Corregir Atlas y `MONGODB_URI` |
 | `/health` da 200 pero `/` da 404 | Commit anterior desplegado | Comparar el hash del log y limpiar caché |
