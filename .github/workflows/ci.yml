@@ -7,6 +7,16 @@ on:
     branches: [main]
 
 jobs:
+  docker-build:
+    name: Backend Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build reproducible backend image
+        run: docker build --file backend/Dockerfile --tag erp-ci .
+      - name: Check Express startup without database access
+        run: docker run --rm --entrypoint node erp-ci -e "require('./src/app').createApp()"
+
   frontend-cloudflare:
     name: Frontend / Cloudflare readiness
     runs-on: ubuntu-latest

@@ -40,3 +40,5 @@ Los primeros jobs backend de GitHub Actions pasaron en Node 22 y 24. El verifica
 La integración Cloudflare externa reporta que el Worker proyectoerp no existe en la cuenta conectada. Se debe crear/corregir la asociación del Worker mediante acceso a Cloudflare. main no tenía protección ni rulesets al verificar; este check externo no es una protección de rama. No se deshabilitó el check ni se afirmó que el despliegue funciona.
 
 npm audit señaló avisos transitivos del stack Expo/React Native. No se aplicó audit fix --force: proponía downgrades incompatibles de Expo/React Native. La revisión de compatibilidad de estas dependencias permanece pendiente para una entrega de producción; no afecta el resultado de las pruebas ejecutadas ni constituye una validación de seguridad completa.
+
+Se añadió CI para construir Docker con el lockfile raíz y verificar createApp sin conectar una base. Docker local no pudo ejecutarse porque el daemon Docker Desktop no está disponible. La concurrencia de asignación añadió una prueba: 7 regresiones de integración aprobadas; 17 pruebas dirigidas de core/registro/permisos aprobadas tras reforzar compare-and-swap.
