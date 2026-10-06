@@ -4,6 +4,7 @@ module.exports = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '4000', 10),
   mongoUri: process.env.MONGODB_URI || '',
+  gitCommit: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || '',
   jwt: {
     secret: process.env.JWT_SECRET || 'dev-secret-change-me-32-chars-minimum',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-change-me-32-chars-min',

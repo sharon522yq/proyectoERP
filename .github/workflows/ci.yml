@@ -7,6 +7,37 @@ on:
     branches: [main]
 
 jobs:
+  frontend-cloudflare:
+    name: Frontend / Cloudflare readiness
+    runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_API_URL: https://proyectoerp-api.onrender.com/api/v1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Export Expo web app
+        working-directory: frontend
+        run: npm run export:web
+
+      - name: Validate Cloudflare deployment inputs
+        run: |
+          test -f frontend/dist/index.html
+          test -f frontend/dist/_headers
+          test -f frontend/dist/_redirects
+          test -f frontend/wrangler.jsonc
+          node -e "JSON.parse(require('fs').readFileSync('frontend/wrangler.jsonc', 'utf8'))"
+          rg --quiet 'https://proyectoerp-api.onrender.com/api/v1' frontend/dist/_expo/static/js/web/*.js
+
   test:
     runs-on: ubuntu-latest
 
