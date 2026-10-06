@@ -90,24 +90,25 @@ export default function DashboardScreen() {
           subtitle={`Rol: ${user ? user.role : ''} — Panel general del ERP`}
         />
 
+        {!user?.companyId && <Text style={{ padding: 16 }}>Tu cuenta está pendiente de asignación a una empresa. Contacta al administrador.</Text>}
         <View style={styles.metricsRow}>
-          <MetricCard
+          {summary?.sales && <MetricCard
             title="Ventas Totales"
-            value={summary && summary.sales ? `$${summary.sales.totalRevenue || 0}` : '$0'}
+            value={summary && summary.sales ? `$${summary.sales.totalInvoiced || 0}` : '$0'}
             subtitle="Ingresos registrados"
-          />
-          <MetricCard
+          />}
+          {summary?.crm && <MetricCard
             title="Clientes Activos"
             value={summary && summary.crm ? summary.crm.customersCount || 0 : '0'}
             subtitle="Cartera CRM"
             color={tokens.colors.secondary}
-          />
-          <MetricCard
+          />}
+          {summary?.inventory && <MetricCard
             title="Productos"
             value={summary && summary.products ? summary.products.totalProducts || 0 : '0'}
             subtitle="Catálogo general"
             color={tokens.colors.success}
-          />
+          />}
         </View>
 
         <Text style={styles.sectionTitle}>Módulos del Sistema</Text>

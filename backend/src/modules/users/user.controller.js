@@ -1,7 +1,7 @@
 const { asyncHandler } = require('../../utils/ApiError');
 const service = require('./user.service');
 
-const ctxOf = (req) => ({ userId: req.user.id, companyId: req.companyId, ip: req.ip });
+const ctxOf = (req) => ({ userId: req.user.id, companyId: req.companyId, permissions: req.user.permissions, ip: req.ip });
 
 const create = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: await service.create(req.body, ctxOf(req)) });

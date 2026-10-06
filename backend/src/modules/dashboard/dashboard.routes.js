@@ -5,7 +5,7 @@ const ctrl = require('./dashboard.controller');
 const router = Router();
 router.use(authenticate, scopeCompany);
 
-router.get('/', requirePermission('settings.read'), ctrl.getDashboard);
+router.get('/', ctrl.getDashboard);
 router.get('/sales', requirePermission('sales.invoices.read'), ctrl.getSalesSummary);
 router.get('/sales/report', requirePermission('sales.invoices.read'), ctrl.getSalesReport);
 router.get('/inventory', requirePermission('inventory.read'), ctrl.getInventorySummary);
