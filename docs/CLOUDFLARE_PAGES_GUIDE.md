@@ -33,7 +33,7 @@ En **Variables and secrets**, agrega variables de texto plano para Production:
 
 ```env
 EXPO_PUBLIC_API_URL=https://proyectoerp-api.onrender.com/api/v1
-NODE_VERSION=20
+NODE_VERSION=24
 ```
 
 El repositorio incluye `frontend/wrangler.jsonc`: Wrangler publicará `dist` como
@@ -169,7 +169,7 @@ En **Environment variables (Production)** agrega:
 
 ```env
 EXPO_PUBLIC_API_URL=https://proyectoerp-api.onrender.com/api/v1
-NODE_VERSION=20
+NODE_VERSION=24
 ```
 
 Detalles que evitan errores frecuentes:
@@ -286,7 +286,7 @@ build.
 | Prueba | Resultado correcto |
 |---|---|
 | URL `pages.dev` | Carga la interfaz NexusERP |
-| Recargar una ruta web | No produce 404 gracias a `_redirects` |
+| Recargar una ruta web | No produce 404 gracias a `assets.not_found_handling` |
 | Assets `/_expo/static/*` | Responden 200 y admiten caché larga |
 | Solicitud de login | Va a Render mediante HTTPS |
 | Preflight OPTIONS | Devuelve `Access-Control-Allow-Origin` con Pages |
@@ -298,3 +298,10 @@ El servicio gratuito puede suspenderse por inactividad. La primera solicitud
 desde Pages puede tardar alrededor de un minuto y parecer un timeout. Espera a
 que `https://proyectoerp-api.onrender.com/health` responda y repite el login. Un
 inicio en frío no se corrige cambiando CORS ni reconstruyendo el frontend.
+
+
+## Workers: error 100324 por bucle en _redirects
+
+La regla Pages `/* /index.html 200` no es compatible con Workers Static Assets. No exportar el archivo `_redirects`; `frontend/wrangler.jsonc` ya configura `assets.not_found_handling: single-page-application`. Esto sirve index.html en navegaciones sin asset correspondiente y conserva los archivos JS reales.
+
+Después de integrar la corrección en main, usar Deploy latest commit; Retry del commit viejo vuelve a incluir la regla inválida. Configurar Node 24 y conservar Root directory frontend, Build command npm run export:web y Deploy command npm run deploy:cloudflare. No cambiar secretos ni base MongoDB para resolver este error.

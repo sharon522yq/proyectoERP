@@ -39,11 +39,14 @@ jobs:
         working-directory: frontend
         run: npm run export:web
 
+      - name: Test Workers SPA export validation
+        run: node --test frontend/scripts/verify-web-export.test.js
+
       - name: Validate Cloudflare deployment inputs
         run: |
           test -f frontend/dist/index.html
           test -f frontend/dist/_headers
-          test -f frontend/dist/_redirects
+          test ! -f frontend/dist/_redirects
           test -f frontend/wrangler.jsonc
           node -e "JSON.parse(require('fs').readFileSync('frontend/wrangler.jsonc', 'utf8'))"
           npm --prefix frontend run verify:web
