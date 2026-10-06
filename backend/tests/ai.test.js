@@ -6,7 +6,7 @@
  * validación de entrada 400 y auditoría en ai_interactions.
  * Proveedor: mock (determinista, sin claves) — ejercita la tubería completa.
  */
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -33,7 +33,7 @@ async function registerWithCompany(email, name, role, companyId) {
 }
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();

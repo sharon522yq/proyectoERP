@@ -5,7 +5,7 @@
 process.env.AI_RATE_LIMIT_MAX = '2';
 process.env.AI_DAILY_USER_MAX = '1000';
 
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -16,7 +16,7 @@ let mongo, app, token;
 const stamp = Date.now();
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();

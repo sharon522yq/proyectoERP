@@ -1,4 +1,4 @@
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -11,7 +11,7 @@ let token;
 let companyId;
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();

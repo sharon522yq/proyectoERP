@@ -1,0 +1,10 @@
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
+
+// Replica set local para validar transacciones; no usa MongoDB de producción.
+async function createTestDatabase() {
+  return MongoMemoryReplSet.create({
+    replSet: { count: 1, storageEngine: 'wiredTiger' },
+    instanceOpts: [{ args: ['--nounixsocket'] }]
+  });
+}
+module.exports = { createTestDatabase };
