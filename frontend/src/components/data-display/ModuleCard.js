@@ -5,7 +5,7 @@ import AppLogo from '../branding/AppLogo';
 
 export default function ModuleCard({ title, description, onPress }) {
   return (
-    <TouchableOpacity style={[styles.card, tokens.shadows.sm]} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel={title} style={[styles.card, tokens.shadows.sm]} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.header}>
         <AppLogo size={36} />
       </View>

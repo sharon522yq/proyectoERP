@@ -23,7 +23,7 @@ export default function TopBar({ onToggleMobileMenu, title }) {
             <Text style={styles.userRole}>({user.role})</Text>
           </View>
         ) : null}
-        <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+        <TouchableOpacity accessibilityRole="button" style={styles.logoutBtn} onPress={logout}>
           <Text style={styles.logoutText}>Salir</Text>
         </TouchableOpacity>
       </View>

@@ -11,7 +11,8 @@
     "prebuild:android": "npx expo prebuild --platform android --clean",
     "export:web": "expo export --platform web --output-dir dist --clear",
     "deploy:cloudflare": "npx --yes wrangler@4 deploy",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "web:render": "expo start --web --localhost --port 8086 --clear"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",

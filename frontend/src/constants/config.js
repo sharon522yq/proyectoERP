@@ -1,12 +1,10 @@
-import { Platform } from 'react-native';
-
 export const ERP_NAME = 'NexusERP';
 const PRODUCTION_API_URL = 'https://proyectoerp-api.onrender.com/api/v1';
-const DEVELOPMENT_API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:4000/api/v1' : 'http://localhost:4000/api/v1';
 
 // EXPO_PUBLIC_API_URL debe configurarse en Cloudflare/EAS para despliegues controlados.
 // El fallback de producción evita que una build publicada intente conectarse a localhost.
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || (process.env.EXPO_PUBLIC_USE_LOCAL_API === 'true' ? DEVELOPMENT_API_URL : PRODUCTION_API_URL)).replace(/\/+$/, '');
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || PRODUCTION_API_URL;
+if (API_URL !== PRODUCTION_API_URL) throw new Error('EXPO_PUBLIC_API_URL debe apuntar a la API de Render');
 
 export const MENU_BY_PERMISSION = [
   { label: 'Dashboard', route: 'dashboard', permission: null, icon: 'dashboard' },
