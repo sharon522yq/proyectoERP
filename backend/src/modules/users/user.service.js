@@ -1,6 +1,7 @@
 const { assertCompany, isGlobal } = require('../../utils/companyAccess');
 const bcrypt = require('bcryptjs');
 const Company = require('../companies/company.model');
+const User = require('./user.model');
 const repo = require('./user.repository');
 const roleService = require('../roles/role.service');
 const { ApiError } = require('../../utils/ApiError');
@@ -62,7 +63,7 @@ async function update(id, data, ctx) {
     safe.role = role.name;
   }
   const change = data.companyId !== undefined || safe.role !== undefined || safe.active !== undefined;
-  const updated = await repo.update(id, change ? { $set: safe, $inc: { sessionVersion: 1 } } : safe);
+  const updated = await User.findByIdAndUpdate(id, change ? { $set: safe, $inc: { sessionVersion: 1 } } : { $set: safe }, { new: true, runValidators: true });
   await logAudit({ userId: ctx.userId, companyId: prev.companyId, action: 'UPDATE', module: 'users', documentId: id, previousData: { name: prev.name, role: prev.role, companyId: prev.companyId }, newData: { name: safe.name, role: safe.role, active: safe.active, companyId: safe.companyId }, ip: ctx.ip });
   return updated.toSafeJSON();
 }

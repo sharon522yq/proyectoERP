@@ -44,7 +44,7 @@ test('enlace nuevo invalida anterior, se consume una vez y revoca refresh', asyn
 });
 
 test('administrador global asigna empresa y registra auditoría', async () => {
-  const admin = await request(app).post('/api/v1/auth/register').send({ name: 'Global Admin', email: 'global@example.com', password: 'Password123', role: 'ADMIN' });
+  const admin = await request(app).post('/api/v1/auth/register').send({ name: 'Global Admin', email: 'global@example.com', password: 'Password123', role: 'SUPER_ADMIN' });
   const auth = { Authorization: `Bearer ${admin.body.data.accessToken}` };
   const company = (await request(app).post('/api/v1/companies').set(auth).send({ name: 'Empresa acceso' })).body.data;
   const user = await User.findOne({ email: 'public@example.com' });

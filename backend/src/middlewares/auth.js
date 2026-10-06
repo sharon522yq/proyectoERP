@@ -28,6 +28,7 @@ function hasPermission(userPermissions, required) {
 
 const requirePermission = (permission) => (req, res, next) => {
   if (!req.user) return next(new ApiError(401, 'No autenticado', 'AUTH_REQUIRED'));
+  if (!req.user.companyId && !req.user.permissions.includes('*')) return next(new ApiError(403, 'Tu cuenta no tiene una empresa asignada', 'COMPANY_REQUIRED'));
   if (!hasPermission(req.user.permissions, permission)) {
     return next(new ApiError(403, 'Sin permiso para esta operación', 'FORBIDDEN'));
   }

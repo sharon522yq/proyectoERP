@@ -16,7 +16,7 @@ function sha256(s) { return crypto.createHash('sha256').update(s).digest('hex');
 // público queda limitado al rol EMPLEADO sin companyId (previene escalada de privilegios).
 function privilegedRegisterAllowed() {
   if (process.env.ALLOW_PRIVILEGED_REGISTER !== undefined) {
-    return process.env.ALLOW_PRIVILEGED_REGISTER === 'true';
+    return ['test', 'development'].includes(env.env) && process.env.ALLOW_PRIVILEGED_REGISTER === 'true';
   }
   return env.env === 'test';
 }
@@ -87,12 +87,12 @@ async function refresh(refreshToken) {
   const user = await userRepo.findByIdWithSecrets(payload.sub);
   if (!user || !user.active) throw new ApiError(401, 'Refresh inválido', 'INVALID_REFRESH');
   const hash = sha256(refreshToken);
-  if (user.refreshTokenHash !== hash) throw new ApiError(401, 'Refresh inválido', 'INVALID_REFRESH');
+  if (payload.type !== 'refresh' || (payload.version || 0) !== (user.sessionVersion || 0) || user.refreshTokenHash !== hash) throw new ApiError(401, 'Refresh inválido', 'INVALID_REFRESH');
 
   // Rotación: emitir nuevo refresh e invalidar el viejo
   const permissions = await permissionsFor(user.role);
   const newRefresh = signRefresh(user);
-  const rotated = await User.updateOne({ _id: user._id, active: true, refreshTokenHash: hash }, { $set: { refreshTokenHash: sha256(newRefresh) } });
+  const rotated = await User.updateOne({ _id: user._id, active: true, refreshTokenHash: hash, sessionVersion: user.sessionVersion || 0 }, { $set: { refreshTokenHash: sha256(newRefresh) } });
   if (!rotated.modifiedCount) throw new ApiError(401, 'Refresh inválido', 'INVALID_REFRESH');
   return { accessToken: signAccess(user, permissions), refreshToken: newRefresh, permissions };
 }
@@ -109,7 +109,8 @@ async function changePassword(userId, currentPassword, newPassword) {
   if (!user) throw new ApiError(404, 'Usuario no encontrado', 'USER_NOT_FOUND');
   const ok = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!ok) throw new ApiError(401, 'Contraseña actual incorrecta', 'INVALID_CREDENTIALS');
-  await User.updateOne({ _id: userId }, { $set: { passwordHash: await bcrypt.hash(newPassword, 12), refreshTokenHash: null }, $inc: { sessionVersion: 1 } });
+  const changed = await User.updateOne({ _id: userId, passwordHash: user.passwordHash, sessionVersion: user.sessionVersion || 0 }, { $set: { passwordHash: await bcrypt.hash(newPassword, 12), refreshTokenHash: null }, $unset: { resetTokenHash: '', resetExpires: '' }, $inc: { sessionVersion: 1 } });
+  if (!changed.modifiedCount) throw new ApiError(409, 'La sesión cambió; vuelve a iniciar sesión', 'SESSION_CHANGED');
   return { ok: true };
 }
 

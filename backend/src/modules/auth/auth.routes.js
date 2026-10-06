@@ -2,8 +2,6 @@ const { Router } = require('express');
 const rateLimit = require('express-rate-limit');
 const { authenticate } = require('../../middlewares/auth');
 const { asyncHandler } = require('../../utils/ApiError');
-const setup = require('./setup.service');
-const { body } = require('express-validator');
 const User = require('../users/user.model');
 const { validate } = require('../../middlewares/http');
 const controller = require('./auth.controller');
@@ -18,9 +16,6 @@ const loginLimiter = rateLimit({
 });
 
 const router = Router();
-router.get('/setup', asyncHandler(async (req, res) => res.json({ success: true, data: await setup.status() })));
-router.post('/setup', loginLimiter, v.registerRules, body('companyName').isString().trim().isLength({ min: 2, max: 120 }), validate,
-  asyncHandler(async (req, res) => res.status(201).json({ success: true, data: await setup.initialize(req.body, req.headers['x-setup-token']) })));
 router.get('/me', authenticate, asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id);
   res.json({ success: true, data: { user: user.toSafeJSON(), permissions: req.user.permissions } });

@@ -16,7 +16,7 @@ beforeAll(async () => {
 
   // Setup admin + company
   await request(app).post('/api/v1/auth/register').send({ name: 'E2E Admin', email: 'e2eadmin@test.com', password: 'Password123', role: 'ADMIN' });
-  const comp = await request(app).post('/api/v1/companies').set('Authorization', 'Bearer ' + (await request(app).post('/api/v1/auth/login').send({ email: 'e2eadmin@test.com', password: 'Password123' })).body.data.accessToken).send({ name: 'E2E Test Co' });
+  const comp = { body: { data: await require('../src/modules/companies/company.model').create({ name: 'E2E Test Co' }) } };
   companyId = comp.body.data._id;
   await require('../src/modules/users/user.model').updateOne({ email: 'e2eadmin@test.com' }, { $set: { companyId } });
   const login = await request(app).post('/api/v1/auth/login').send({ email: 'e2eadmin@test.com', password: 'Password123' });
@@ -127,7 +127,7 @@ describe('E2E — Escenario 2: Multiempresa', () => {
     await request(app).post('/api/v1/auth/register').send({ name: 'E2E Admin 2', email: 'e2e2@test.com', password: 'Password123', role: 'ADMIN' });
     const login2 = await request(app).post('/api/v1/auth/login').send({ email: 'e2e2@test.com', password: 'Password123' });
     token2 = login2.body.data.accessToken;
-    const comp = await request(app).post('/api/v1/companies').set('Authorization', `Bearer ${token2}`).send({ name: 'Empresa 2' });
+    const comp = { body: { data: await require('../src/modules/companies/company.model').create({ name: 'Empresa 2' }) } };
     companyId2 = comp.body.data._id;
     await require('../src/modules/users/user.model').updateOne({ email: 'e2e2@test.com' }, { $set: { companyId: companyId2 } });
     const login2b = await request(app).post('/api/v1/auth/login').send({ email: 'e2e2@test.com', password: 'Password123' });

@@ -17,7 +17,7 @@ beforeAll(async () => {
   // Register admin
   await request(app).post('/api/v1/auth/register').send({ name: 'Test Admin', email: 'invadmin@test.com', password: 'Password123', role: 'ADMIN' });
   // Create company
-  const comp = await request(app).post('/api/v1/companies').set('Authorization', 'Bearer ' + (await request(app).post('/api/v1/auth/login').send({ email: 'invadmin@test.com', password: 'Password123' })).body.data.accessToken).send({ name: 'Inv Test Co' });
+  const comp = { body: { data: await require('../src/modules/companies/company.model').create({ name: 'Inv Test Co' }) } };
   companyId = comp.body.data._id;
   // Update user & re-login
   await require('../src/modules/users/user.model').updateOne({ email: 'invadmin@test.com' }, { $set: { companyId } });

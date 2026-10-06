@@ -52,6 +52,7 @@ function createApp() {
   if (env.env !== 'production') {
     allowedOrigins.add('http://localhost:19006');
     allowedOrigins.add('http://localhost:8081');
+    allowedOrigins.add('http://localhost:8086');
   }
   app.use(cors({ origin: (origin, cb) => {
     const normalizedOrigin = origin && origin.replace(/\/+$/, '');

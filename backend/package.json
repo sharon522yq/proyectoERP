@@ -7,7 +7,8 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "test": "jest --runInBand --detectOpenHandles",
-    "lint": "eslint src --ext .js"
+    "lint": "eslint src --ext .js",
+    "setup:owner": "node scripts/initialize-owner.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

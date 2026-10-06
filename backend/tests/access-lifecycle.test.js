@@ -3,6 +3,7 @@ const request = require('supertest');
 const { createTestDatabase } = require('./helpers/database');
 const { createApp } = require('../src/app');
 const User = require('../src/modules/users/user.model');
+const setup = require('../src/modules/auth/setup.service');
 let db, app, access, refresh;
 beforeAll(async () => {
   db = await createTestDatabase(); await mongoose.connect(db.getUri());
@@ -11,11 +12,13 @@ beforeAll(async () => {
 afterAll(async () => { delete process.env.INITIAL_SETUP_TOKEN; await mongoose.disconnect(); await db.stop(); });
 test('configuración exige código y crea una empresa con administrador', async () => {
   const data = { name: 'Responsable', companyName: 'Empresa prueba', email: 'owner@example.com', password: 'Password123' };
-  expect((await request(app).post('/api/v1/auth/setup').send(data)).status).toBe(403);
-  expect((await request(app).post('/api/v1/auth/setup').set('X-Setup-Token', process.env.INITIAL_SETUP_TOKEN).send(data)).status).toBe(201);
+  expect((await request(app).post('/api/v1/auth/setup').send(data)).status).toBe(404);
+  await expect(setup.initialize(data, '')).rejects.toMatchObject({ code: 'SETUP_FORBIDDEN' });
+  expect((await setup.initialize(data, process.env.INITIAL_SETUP_TOKEN)).created).toBe(true);
   const user = await User.findOne({ email: data.email });
   expect(user.role).toBe('ADMIN'); expect(user.companyId).toBeTruthy();
-  expect((await request(app).post('/api/v1/auth/setup').set('X-Setup-Token', process.env.INITIAL_SETUP_TOKEN).send(data)).status).toBe(409);
+  expect((await setup.initialize(data, process.env.INITIAL_SETUP_TOKEN)).created).toBe(false);
+  await expect(setup.initialize({ ...data, companyName: 'Conflicting company' }, process.env.INITIAL_SETUP_TOKEN)).rejects.toMatchObject({ code: 'SETUP_CONFLICT' });
 });
 test('me devuelve permisos y desactivación invalida access emitido', async () => {
   const login = await request(app).post('/api/v1/auth/login').send({ email: 'owner@example.com', password: 'Password123' });

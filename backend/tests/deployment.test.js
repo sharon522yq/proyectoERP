@@ -60,3 +60,19 @@ describe('Endpoints de despliegue', () => {
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
 });
+
+test('CORS production allows configured domains and local frontend only explicitly', async () => {
+  const previousEnv = env.env, previousOrigins = env.corsOrigins;
+  try {
+    env.env = 'production';
+    env.corsOrigins = ['https://erp.example.com', 'http://localhost:8086'];
+    const productionApp = createApp();
+    for (const origin of env.corsOrigins) {
+      const response = await request(productionApp).options('/api/v1/auth/login').set('Origin', origin).set('Access-Control-Request-Method', 'POST').set('Access-Control-Request-Headers', 'content-type');
+      expect(response.status).toBe(204);
+      expect(response.headers['access-control-allow-origin']).toBe(origin);
+    }
+    expect((await request(productionApp).get('/health').set('Origin', 'https://erp.example.com.evil.invalid')).headers['access-control-allow-origin']).toBeUndefined();
+    expect((await request(productionApp).get('/health').set('Origin', 'http://localhost:8081')).headers['access-control-allow-origin']).toBeUndefined();
+  } finally { env.env = previousEnv; env.corsOrigins = previousOrigins; }
+});

@@ -24,7 +24,7 @@ beforeAll(async () => {
   token = reg.body.data.accessToken;
 
   // 2. Create a company
-  const comp = await request(app).post('/api/v1/companies').set('Authorization', `Bearer ${token}`).send({ name: 'CRM Test Co' });
+  const comp = { body: { data: await require('../src/modules/companies/company.model').create({ name: 'CRM Test Co' }) } };
   companyId = comp.body.data._id;
 
   // 3. Assign companyId to user in DB

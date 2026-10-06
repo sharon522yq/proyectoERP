@@ -4,7 +4,7 @@ const { MongoMemoryReplSet } = require('mongodb-memory-server');
 async function createTestDatabase() {
   return MongoMemoryReplSet.create({
     replSet: { count: 1, storageEngine: 'wiredTiger' },
-    instanceOpts: [{ args: ['--nounixsocket'] }]
+    instanceOpts: [{ args: process.platform === 'win32' ? [] : ['--nounixsocket'] }]
   });
 }
 module.exports = { createTestDatabase };
