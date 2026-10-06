@@ -1,12 +1,13 @@
 import { registerRootComponent } from 'expo';
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth, AuthProvider } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 
 function Root() {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
+  if (!ready) return <ActivityIndicator accessibilityLabel="Cargando sesión" />;
   return user ? <DashboardScreen /> : <LoginScreen />;
 }
 

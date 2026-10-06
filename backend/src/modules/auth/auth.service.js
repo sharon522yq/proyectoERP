@@ -1,3 +1,4 @@
+const { sendPasswordReset } = require('../../utils/passwordResetMail');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -27,7 +28,7 @@ async function permissionsFor(roleName) {
 
 function signAccess(user, permissions) {
   return jwt.sign(
-    { sub: String(user._id), role: user.role, companyId: user.companyId ? String(user.companyId) : null, permissions },
+    { sub: String(user._id), role: user.role, companyId: user.companyId ? String(user.companyId) : null, permissions, version: user.sessionVersion || 0 },
     env.jwt.secret, { expiresIn: env.jwt.accessExpires }
   );
 }
@@ -35,7 +36,7 @@ function signAccess(user, permissions) {
 function signRefresh(user) {
   // jti único garante que cada refresh token sea distinto aunque iat sea el mismo segundo
   return jwt.sign(
-    { sub: String(user._id), type: 'refresh', jti: crypto.randomUUID() },
+    { sub: String(user._id), type: 'refresh', jti: crypto.randomUUID(), version: user.sessionVersion || 0 },
     env.jwt.refreshSecret,
     { expiresIn: `${env.jwt.refreshExpiresDays}d` }
   );
@@ -91,13 +92,14 @@ async function refresh(refreshToken) {
   // Rotación: emitir nuevo refresh e invalidar el viejo
   const permissions = await permissionsFor(user.role);
   const newRefresh = signRefresh(user);
-  await userRepo.update(user._id, { refreshTokenHash: sha256(newRefresh) });
+  const rotated = await User.updateOne({ _id: user._id, active: true, refreshTokenHash: hash }, { $set: { refreshTokenHash: sha256(newRefresh) } });
+  if (!rotated.modifiedCount) throw new ApiError(401, 'Refresh inválido', 'INVALID_REFRESH');
   return { accessToken: signAccess(user, permissions), refreshToken: newRefresh, permissions };
 }
 
 async function logout(userId, refreshToken, ip) {
   const user = await userRepo.findById(userId);
-  await userRepo.update(userId, { refreshTokenHash: null });
+  await User.updateOne({ _id: userId }, { $set: { refreshTokenHash: null }, $inc: { sessionVersion: 1 } });
   await logAudit({ userId, companyId: user ? user.companyId : undefined, action: 'LOGOUT', module: 'auth', ip });
   return { ok: true };
 }
@@ -107,24 +109,28 @@ async function changePassword(userId, currentPassword, newPassword) {
   if (!user) throw new ApiError(404, 'Usuario no encontrado', 'USER_NOT_FOUND');
   const ok = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!ok) throw new ApiError(401, 'Contraseña actual incorrecta', 'INVALID_CREDENTIALS');
-  await userRepo.update(userId, { passwordHash: await bcrypt.hash(newPassword, 12), refreshTokenHash: null });
+  await User.updateOne({ _id: userId }, { $set: { passwordHash: await bcrypt.hash(newPassword, 12), refreshTokenHash: null }, $inc: { sessionVersion: 1 } });
   return { ok: true };
 }
 
 async function forgotPassword(email) {
   const user = await userRepo.findByEmail(String(email).toLowerCase());
-  if (!user) return { ok: true };
+  if (!user || !user.active) return { ok: true };
   const token = crypto.randomBytes(32).toString('hex');
   await userRepo.update(user._id, { resetTokenHash: sha256(token), resetExpires: new Date(Date.now() + 3600e3) });
-  if (env.env === 'production') return { ok: true };
+  await sendPasswordReset(user.email, token);
+  if (env.env !== 'test') return { ok: true };
   return { ok: true, resetToken: token };
 }
 
 async function resetPassword(token, newPassword) {
   const hash = sha256(token);
-  const user = await User.findOne({ resetTokenHash: hash, resetExpires: { $gt: new Date() } }).select('+resetTokenHash +resetExpires');
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  const user = await User.findOneAndUpdate(
+    { resetTokenHash: hash, resetExpires: { $gt: new Date() }, active: true },
+    { $set: { passwordHash, refreshTokenHash: null }, $unset: { resetTokenHash: '', resetExpires: '' }, $inc: { sessionVersion: 1 } }
+  );
   if (!user) throw new ApiError(400, 'Token inválido o expirado', 'INVALID_RESET');
-  await userRepo.update(user._id, { passwordHash: await bcrypt.hash(newPassword, 12), resetTokenHash: undefined, resetExpires: undefined, refreshTokenHash: null });
   return { ok: true };
 }
 

@@ -6,13 +6,18 @@ const authenticate = asyncHandler(async (req, res, next) => {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) throw new ApiError(401, 'No autenticado', 'AUTH_REQUIRED');
-  try {
-    const payload = jwt.verify(token, env.jwt.secret);
-    req.user = { id: payload.sub, role: payload.role, companyId: payload.companyId || null, permissions: payload.permissions || [] };
-    return next();
-  } catch {
+  let payload;
+  try { payload = jwt.verify(token, env.jwt.secret); }
+  catch { throw new ApiError(401, 'Sesión inválida o expirada', 'AUTH_INVALID'); }
+  const User = require('../modules/users/user.model');
+  const roleService = require('../modules/roles/role.service');
+  const user = await User.findById(payload.sub).select('+sessionVersion');
+  if (!user || !user.active || (payload.version || 0) !== (user.sessionVersion || 0)) {
     throw new ApiError(401, 'Sesión inválida o expirada', 'AUTH_INVALID');
   }
+  const role = await roleService.findByName(user.role);
+  req.user = { id: String(user._id), role: user.role, companyId: user.companyId ? String(user.companyId) : null, permissions: role ? role.permissions.filter(p => (payload.permissions || []).includes('*') || (payload.permissions || []).includes(p)) : [] };
+  return next();
 });
 
 function hasPermission(userPermissions, required) {

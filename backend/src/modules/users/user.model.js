@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, required: true, uppercase: true, trim: true },
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', index: true },
   active: { type: Boolean, default: true },
+  sessionVersion: { type: Number, default: 0, select: false },
   refreshTokenHash: { type: String, select: false },
   resetTokenHash: { type: String, select: false },
   resetExpires: { type: Date, select: false }
@@ -14,6 +15,7 @@ const userSchema = new mongoose.Schema({
 
 userSchema.methods.toSafeJSON = function () {
   const obj = this.toObject();
+  delete obj.sessionVersion;
   delete obj.passwordHash;
   delete obj.refreshTokenHash;
   delete obj.resetTokenHash;

@@ -48,12 +48,12 @@ function createApp() {
     next();
   });
 
-  const allowedOrigins = [env.frontendUrl];
+  const allowedOrigins = [...env.corsOrigins];
   if (env.env !== 'production') {
     allowedOrigins.push('http://localhost:19006', 'http://localhost:8081');
   }
   app.use(cors({ origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) cb(null, true);
+    if (!origin || allowedOrigins.includes(origin.replace(/\/+$/, ''))) cb(null, true);
     else cb(null, false);
   }}));
 

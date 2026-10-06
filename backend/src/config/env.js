@@ -11,6 +11,7 @@ module.exports = {
     refreshExpiresDays: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS || '7', 10)
   },
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:19006',
+  corsOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:19006').split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean),
   // FASE 12 — IA: proveedor desacoplado; secretos SOLO por variables de entorno.
   // Kill-switch: con proveedor real debe habilitarse explícitamente (AI_ENABLED=true);
   // con el proveedor determinista "mock" (default) habilita desarrollo/tests sin claves.

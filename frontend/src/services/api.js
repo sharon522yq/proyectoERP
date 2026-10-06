@@ -102,6 +102,9 @@ api.interceptors.response.use(
 // --- Dominios API ---
 
 export const authApi = {
+  me: () => api.get('/auth/me').then(r => r.data.data),
+  setupStatus: () => api.get('/auth/setup').then(r => r.data.data),
+  setup: (payload, code) => api.post('/auth/setup', payload, { headers: { 'X-Setup-Token': code } }).then(r => r.data.data),
   login: (email, password) => api.post('/auth/login', { email, password }).then((r) => r.data.data),
   register: (payload) => api.post('/auth/register', payload).then((r) => r.data.data),
   logout: (token) => api.post('/auth/logout', { refreshToken: token || refreshTokenValue }).then((r) => r.data),
