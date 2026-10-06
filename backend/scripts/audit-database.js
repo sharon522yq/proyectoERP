@@ -24,7 +24,7 @@ const mongoose = require('mongoose');
       emptyForInitialSetup: users === 0 && companies === 0 }, null, 2));
   } catch (error) {
     const safe = ['DATABASE_REQUIRED', 'EXPLICIT_DATABASE_REQUIRED'];
-    console.error(safe.includes(error.message) ? error.message : 'DATABASE_AUDIT_FAILED');
+    console.error(safe.includes(error.message) ? error.message : require('./database-diagnostics').databaseFailureCode(error));
     process.exitCode = 1;
   } finally { await mongoose.disconnect(); }
 })();

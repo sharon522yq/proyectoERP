@@ -33,7 +33,7 @@ En **Variables and secrets**, agrega variables de texto plano para Production:
 
 ```env
 EXPO_PUBLIC_API_URL=https://proyectoerp-api.onrender.com/api/v1
-NODE_VERSION=20
+NODE_VERSION=24
 ```
 
 El repositorio incluye `frontend/wrangler.jsonc`: Wrangler publicará `dist` como
@@ -169,7 +169,7 @@ En **Environment variables (Production)** agrega:
 
 ```env
 EXPO_PUBLIC_API_URL=https://proyectoerp-api.onrender.com/api/v1
-NODE_VERSION=20
+NODE_VERSION=24
 ```
 
 Detalles que evitan errores frecuentes:
