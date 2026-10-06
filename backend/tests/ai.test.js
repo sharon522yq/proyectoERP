@@ -6,7 +6,7 @@
  * validación de entrada 400 y auditoría en ai_interactions.
  * Proveedor: mock (determinista, sin claves) — ejercita la tubería completa.
  */
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -22,9 +22,7 @@ async function registerWithCompany(email, name, role, companyId) {
   await request(app).post('/api/v1/auth/register').send({ name, email, password: 'Password123', role });
   let login = await request(app).post('/api/v1/auth/login').send({ email, password: 'Password123' });
   if (!companyId) {
-    const comp = await request(app).post('/api/v1/companies')
-      .set('Authorization', `Bearer ${login.body.data.accessToken}`)
-      .send({ name: `${name} Co ${stamp}` });
+    const comp = { body: { data: await require('../src/modules/companies/company.model').create({ name: `${name} Co ${stamp}` }) } };
     companyId = comp.body.data._id;
   }
   await require('../src/modules/users/user.model').updateOne({ email }, { $set: { companyId } });
@@ -33,7 +31,7 @@ async function registerWithCompany(email, name, role, companyId) {
 }
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();

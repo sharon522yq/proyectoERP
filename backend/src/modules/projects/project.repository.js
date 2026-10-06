@@ -14,7 +14,7 @@ async function listProjects(companyId, { page = 1, limit = 20, status } = {}) {
   return { items, total, page, limit };
 }
 async function updateProject(id, data) {
-  await Project.updateOne({ _id: id }, { $set: data });
+  await Project.updateOne({ _id: id }, { $set: data }, { runValidators: true });
   return Project.findById(id);
 }
 
@@ -32,7 +32,7 @@ async function listTasks(companyId, { projectId, status, page = 1, limit = 20 } 
   return { items, total, page, limit };
 }
 async function updateTask(id, data) {
-  await Task.updateOne({ _id: id }, { $set: data });
+  await Task.updateOne({ _id: id }, { $set: data }, { runValidators: true });
   return Task.findById(id);
 }
 

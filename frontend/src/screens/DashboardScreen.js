@@ -9,6 +9,7 @@ import PageHeader from '../components/layout/PageHeader';
 import MetricCard from '../components/data-display/MetricCard';
 import ModuleCard from '../components/data-display/ModuleCard';
 import LoadingSkeleton from '../components/data-display/LoadingSkeleton';
+import ErrorState from '../components/data-display/ErrorState';
 
 import ProductsScreen from './products/ProductsScreen';
 import InventoryScreen from './inventory/InventoryScreen';
@@ -27,6 +28,7 @@ export default function DashboardScreen() {
   const { user, has } = useAuth();
   const [currentRoute, setCurrentRoute] = useState('dashboard');
   const [summary, setSummary] = useState(null);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,10 +39,11 @@ export default function DashboardScreen() {
 
   const loadDashboard = async () => {
     try {
-      setLoading(true);
+      setLoading(true); setError(null);
       const data = await dashboardApi.getSummary();
       setSummary(data);
-    } catch {
+    } catch (failure) {
+      setError(failure.response?.data?.message || 'No se pudo cargar el dashboard');
       setSummary(null);
     } finally {
       setLoading(false);
@@ -83,6 +86,7 @@ export default function DashboardScreen() {
       return <LoadingSkeleton />;
     }
 
+    if (error) return <ErrorState message={error} onRetry={loadDashboard} />;
     return (
       <ScrollView contentContainerStyle={styles.dashboardScroll}>
         <PageHeader
@@ -90,24 +94,25 @@ export default function DashboardScreen() {
           subtitle={`Rol: ${user ? user.role : ''} — Panel general del ERP`}
         />
 
+        {!user?.companyId && <Text style={{ padding: 16 }}>Tu cuenta está pendiente de asignación a una empresa. Contacta al administrador.</Text>}
         <View style={styles.metricsRow}>
-          <MetricCard
+          {summary?.sales && <MetricCard
             title="Ventas Totales"
-            value={summary && summary.sales ? `$${summary.sales.totalRevenue || 0}` : '$0'}
+            value={summary && summary.sales ? `$${summary.sales.totalInvoiced || 0}` : '$0'}
             subtitle="Ingresos registrados"
-          />
-          <MetricCard
+          />}
+          {summary?.crm && <MetricCard
             title="Clientes Activos"
-            value={summary && summary.crm ? summary.crm.customersCount || 0 : '0'}
+            value={summary && summary.crm ? summary.crm.activeCustomers || 0 : '0'}
             subtitle="Cartera CRM"
             color={tokens.colors.secondary}
-          />
-          <MetricCard
+          />}
+          {summary?.inventory && <MetricCard
             title="Productos"
-            value={summary && summary.products ? summary.products.totalProducts || 0 : '0'}
+            value={summary && summary.inventory ? summary.inventory.totalProducts || 0 : '0'}
             subtitle="Catálogo general"
             color={tokens.colors.success}
-          />
+          />}
         </View>
 
         <Text style={styles.sectionTitle}>Módulos del Sistema</Text>

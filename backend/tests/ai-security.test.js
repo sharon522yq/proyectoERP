@@ -12,7 +12,7 @@
  */
 process.env.AI_API_KEY = 'sk-test-super-secreta-NO-DELANTAR';
 
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
@@ -30,16 +30,14 @@ const INVOICE_TOTAL = 999999;
 async function makeAdmin(email, name) {
   await request(app).post('/api/v1/auth/register').send({ name, email, password: 'Password123', role: 'ADMIN' });
   let login = await request(app).post('/api/v1/auth/login').send({ email, password: 'Password123' });
-  const comp = await request(app).post('/api/v1/companies')
-    .set('Authorization', `Bearer ${login.body.data.accessToken}`)
-    .send({ name: `${name} Co ${stamp}` });
+  const comp = { body: { data: await require('../src/modules/companies/company.model').create({ name: `${name} Co ${stamp}` }) } };
   await require('../src/modules/users/user.model').updateOne({ email }, { $set: { companyId: comp.body.data._id } });
   login = await request(app).post('/api/v1/auth/login').send({ email, password: 'Password123' });
   return { token: login.body.data.accessToken, companyId: comp.body.data._id };
 }
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();

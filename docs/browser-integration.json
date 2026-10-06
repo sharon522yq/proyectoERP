@@ -1,0 +1,129 @@
+{
+  "environment": "isolated temporary MongoDB, intercepted Render transport; no production test",
+  "steps": [
+    "login_loaded",
+    "registration_pending_company",
+    "pending_logout",
+    "autofill_login_dashboard",
+    "products_navigation",
+    "session_reload",
+    "logout",
+    "manual_login"
+  ],
+  "requests": [
+    {
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/me",
+      "status": 204,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "status": 401,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/refresh",
+      "status": 204,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 401,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/register",
+      "status": 204,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "status": 201,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/logout",
+      "status": 204,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "status": 200,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/api/v1/auth/login",
+      "status": 204,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/api/v1/dashboard",
+      "status": 204,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard",
+      "status": 200,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/api/v1/products",
+      "status": 204,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products",
+      "status": 200,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "status": 200,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard",
+      "status": 200,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "status": 200,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200,
+      "destination": "isolated-test-backend"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard",
+      "status": 200,
+      "destination": "isolated-test-backend"
+    }
+  ]
+}

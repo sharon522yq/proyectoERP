@@ -5,7 +5,9 @@
   "description": "ERP modular multiplataforma — Fase 1 Core",
   "scripts": {
     "dev:backend": "npm --prefix backend run dev",
-    "test:backend": "npm --prefix backend test"
+    "test:backend": "npm --prefix backend test",
+    "build:frontend": "npm --prefix frontend run export:web",
+    "deploy:cloudflare": "npm --prefix frontend run deploy:cloudflare"
   },
   "workspaces": [
     "backend",

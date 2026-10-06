@@ -1,4 +1,4 @@
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -8,7 +8,7 @@ const { ensureSeeded: seedUnits } = require('../src/modules/products/unit.servic
 let mongo, app, token, companyId, productId, warehouseId, customerId, invoiceId;
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();
@@ -17,7 +17,7 @@ beforeAll(async () => {
   // Register admin
   await request(app).post('/api/v1/auth/register').send({ name: 'Test Admin', email: 'invadmin@test.com', password: 'Password123', role: 'ADMIN' });
   // Create company
-  const comp = await request(app).post('/api/v1/companies').set('Authorization', 'Bearer ' + (await request(app).post('/api/v1/auth/login').send({ email: 'invadmin@test.com', password: 'Password123' })).body.data.accessToken).send({ name: 'Inv Test Co' });
+  const comp = { body: { data: await require('../src/modules/companies/company.model').create({ name: 'Inv Test Co' }) } };
   companyId = comp.body.data._id;
   // Update user & re-login
   await require('../src/modules/users/user.model').updateOne({ email: 'invadmin@test.com' }, { $set: { companyId } });

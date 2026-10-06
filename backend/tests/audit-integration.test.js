@@ -9,7 +9,7 @@
  *   - Compra recibida   → entrada de stock (PURCHASE_ORDER) + Cuentas por Pagar
  * y las matrices de transición de estado (D-007).
  */
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -26,7 +26,7 @@ let productId, warehouseId, customerId, supplierBId;
 let orderIdA, invoiceIdA, purchaseOrderA;
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();
@@ -35,7 +35,7 @@ beforeAll(async () => {
   // ---- Empresa A ----
   await request(app).post('/api/v1/auth/register').send({ name: 'Admin A', email: emailA, password: 'Password123', role: 'ADMIN' });
   let login = await request(app).post('/api/v1/auth/login').send({ email: emailA, password: 'Password123' });
-  const compA = await request(app).post('/api/v1/companies').set('Authorization', `Bearer ${login.body.data.accessToken}`).send({ name: `Empresa A ${stamp}` });
+  const compA = { body: { data: await require('../src/modules/companies/company.model').create({ name: `Empresa A ${stamp}` }) } };
   companyA = compA.body.data._id;
   await require('../src/modules/users/user.model').updateOne({ email: emailA }, { $set: { companyId: companyA } });
   login = await request(app).post('/api/v1/auth/login').send({ email: emailA, password: 'Password123' });
@@ -53,7 +53,7 @@ beforeAll(async () => {
   // ---- Empresa B ----
   await request(app).post('/api/v1/auth/register').send({ name: 'Admin B', email: emailB, password: 'Password123', role: 'ADMIN' });
   login = await request(app).post('/api/v1/auth/login').send({ email: emailB, password: 'Password123' });
-  const compB = await request(app).post('/api/v1/companies').set('Authorization', `Bearer ${login.body.data.accessToken}`).send({ name: `Empresa B ${stamp}` });
+  const compB = { body: { data: await require('../src/modules/companies/company.model').create({ name: `Empresa B ${stamp}` }) } };
   companyB = compB.body.data._id;
   await require('../src/modules/users/user.model').updateOne({ email: emailB }, { $set: { companyId: companyB } });
   login = await request(app).post('/api/v1/auth/login').send({ email: emailB, password: 'Password123' });

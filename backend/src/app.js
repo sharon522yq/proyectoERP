@@ -48,12 +48,15 @@ function createApp() {
     next();
   });
 
-  const allowedOrigins = [env.frontendUrl];
+  const allowedOrigins = new Set(env.corsOrigins);
   if (env.env !== 'production') {
-    allowedOrigins.push('http://localhost:19006', 'http://localhost:8081');
+    allowedOrigins.add('http://localhost:19006');
+    allowedOrigins.add('http://localhost:8081');
+    allowedOrigins.add('http://localhost:8086');
   }
   app.use(cors({ origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) cb(null, true);
+    const normalizedOrigin = origin && origin.replace(/\/+$/, '');
+    if (!origin || allowedOrigins.has(normalizedOrigin)) cb(null, true);
     else cb(null, false);
   }}));
 
@@ -69,17 +72,29 @@ function createApp() {
   });
   app.use(limiter);
 
-  // Endpoint raíz para diagnóstico del despliegue (evita un NOT_FOUND ambiguo en Render).
-  app.get('/', (req, res) => res.json({
+  const serviceInfo = {
     success: true,
     service: 'erp-backend',
     version: appVersion,
-    status: 'online',
+    commit: env.gitCommit || undefined,
     health: '/health',
-    docs: '/docs'
+    documentation: '/docs',
+    api: '/api/v1'
+  };
+  app.get('/', (req, res) => res.json(serviceInfo));
+  app.get('/health', (req, res) => res.json({
+    success: true,
+    service: serviceInfo.service,
+    version: appVersion,
+    commit: env.gitCommit || undefined
   }));
-
-  app.get('/health', (req, res) => res.json({ success: true, service: 'erp-backend', version: appVersion }));
+  app.get(['/api', '/api/v1'], (req, res) => res.json({
+    success: true,
+    message: 'ERP API disponible',
+    version: appVersion,
+    documentation: '/docs'
+  }));
+  app.get('/favicon.ico', (req, res) => res.status(204).end());
 
   // Swagger docs
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customSiteTitle: 'ERP API Docs' }));

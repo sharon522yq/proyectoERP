@@ -1,4 +1,4 @@
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -8,7 +8,7 @@ let mongo;
 let app;
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   app = createApp();
@@ -22,7 +22,7 @@ afterAll(async () => {
 // Helper: crear usuario + login, retorna { token, user }
 async function setupAdmin(email = 'admin@test.com') {
   await request(app).post('/api/auth/register').send({
-    name: 'Admin Test', email, password: 'Password123', role: 'ADMIN'
+    name: 'Admin Test', email, password: 'Password123', role: 'SUPER_ADMIN'
   });
   const login = await request(app).post('/api/auth/login').send({ email, password: 'Password123' });
   return { token: login.body.data.accessToken, user: login.body.data.user };

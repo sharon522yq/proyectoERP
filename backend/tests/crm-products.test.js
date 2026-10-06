@@ -1,4 +1,4 @@
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { createTestDatabase } = require('./helpers/database');
 const mongoose = require('mongoose');
 const request = require('supertest');
 const { createApp } = require('../src/app');
@@ -11,7 +11,7 @@ let token;
 let companyId;
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await createTestDatabase();
   await mongoose.connect(mongo.getUri());
   await ensureSeeded();
   await seedUnits();
@@ -24,7 +24,7 @@ beforeAll(async () => {
   token = reg.body.data.accessToken;
 
   // 2. Create a company
-  const comp = await request(app).post('/api/v1/companies').set('Authorization', `Bearer ${token}`).send({ name: 'CRM Test Co' });
+  const comp = { body: { data: await require('../src/modules/companies/company.model').create({ name: 'CRM Test Co' }) } };
   companyId = comp.body.data._id;
 
   // 3. Assign companyId to user in DB

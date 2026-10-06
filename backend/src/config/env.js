@@ -4,6 +4,7 @@ module.exports = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '4000', 10),
   mongoUri: process.env.MONGODB_URI || '',
+  gitCommit: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || '',
   jwt: {
     secret: process.env.JWT_SECRET || 'dev-secret-change-me-32-chars-minimum',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-change-me-32-chars-min',
@@ -11,6 +12,7 @@ module.exports = {
     refreshExpiresDays: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS || '7', 10)
   },
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:19006',
+  corsOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:19006').split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean),
   // FASE 12 — IA: proveedor desacoplado; secretos SOLO por variables de entorno.
   // Kill-switch: con proveedor real debe habilitarse explícitamente (AI_ENABLED=true);
   // con el proveedor determinista "mock" (default) habilita desarrollo/tests sin claves.

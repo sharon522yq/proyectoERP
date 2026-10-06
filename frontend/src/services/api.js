@@ -64,7 +64,7 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
-    if (err.response && err.response.status === 401 && !original._retry && !original.url.includes('/auth/') && refreshTokenValue) {
+    if (err.response && err.response.status === 401 && !original._retry && (!original.url.includes('/auth/') || original.url === '/auth/me') && refreshTokenValue) {
       original._retry = true;
       if (!refreshPromise) {
         refreshPromise = axios.post(`${API_URL}/auth/refresh`, { refreshToken: refreshTokenValue })
@@ -102,6 +102,7 @@ api.interceptors.response.use(
 // --- Dominios API ---
 
 export const authApi = {
+  me: () => api.get('/auth/me').then(r => r.data.data),
   login: (email, password) => api.post('/auth/login', { email, password }).then((r) => r.data.data),
   register: (payload) => api.post('/auth/register', payload).then((r) => r.data.data),
   logout: (token) => api.post('/auth/logout', { refreshToken: token || refreshTokenValue }).then((r) => r.data),

@@ -7,7 +7,7 @@ async function listDepartments(companyId) {
   return Department.find({ companyId }).sort({ name: 1 }).lean();
 }
 async function updateDepartment(id, data) {
-  await Department.updateOne({ _id: id }, { $set: data });
+  await Department.updateOne({ _id: id }, { $set: data }, { runValidators: true });
   return Department.findById(id);
 }
 
@@ -25,7 +25,7 @@ async function listEmployees(companyId, { page = 1, limit = 20, departmentId, st
   return { items, total, page, limit };
 }
 async function updateEmployee(id, data) {
-  await Employee.updateOne({ _id: id }, { $set: data });
+  await Employee.updateOne({ _id: id }, { $set: data }, { runValidators: true });
   return Employee.findById(id);
 }
 

@@ -5,16 +5,23 @@ const ctx = (req) => ({ userId: req.user.id, companyId: req.companyId, ip: req.i
 
 const getDashboard = asyncHandler(async (req, res) => {
   const c = ctx(req);
-  const [sales, inventory, finance, production, projects, crm, hr] = await Promise.all([
-    svc.getSalesSummary(c.companyId, req.query),
-    svc.getInventorySummary(c.companyId),
-    svc.getFinanceSummary(c.companyId),
-    svc.getProductionSummary(c.companyId),
-    svc.getProjectSummary(c.companyId),
-    svc.getCRMSummary(c.companyId),
-    svc.getHRSummary(c.companyId)
-  ]);
-  res.json({ success: true, data: { sales, inventory, finance, production, projects, crm, hr } });
+  const { hasPermission } = require('../../middlewares/auth');
+  const specs = [
+    ['sales', 'sales.invoices.read', () => svc.getSalesSummary(c.companyId, req.query)],
+    ['inventory', 'inventory.read', () => svc.getInventorySummary(c.companyId)],
+    ['finance', 'finance.accounts.read', () => svc.getFinanceSummary(c.companyId)],
+    ['production', 'production.orders.read', () => svc.getProductionSummary(c.companyId)],
+    ['projects', 'projects.read', () => svc.getProjectSummary(c.companyId)],
+    ['crm', 'crm.leads.read', () => svc.getCRMSummary(c.companyId)],
+    ['hr', 'hr.employees.read', () => svc.getHRSummary(c.companyId)]
+  ];
+  const data = {};
+  if (c.companyId) {
+    for (const [name, permission, load] of specs) {
+      if (hasPermission(req.user.permissions, permission)) data[name] = await load();
+    }
+  }
+  res.json({ success: true, data });
 });
 
 const getSalesReport = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.getSalesReport(req.companyId, req.query) }); });

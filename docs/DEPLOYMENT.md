@@ -90,6 +90,68 @@ docker run -p 4000:4000 --env-file ../.env erp-backend
 
 ## Producción
 
+### Render (backend)
+
+El repositorio incluye `render.yaml` y un Dockerfile reproducible. Al crear un
+Blueprint en Render, selecciona este repositorio. Si el servicio ya existe,
+configura manualmente los mismos valores:
+
+Para corregir un servicio existente y comprobar que Render realmente desplegó
+el commit nuevo, sigue primero la guía detallada
+[`RENDER_DEPLOYMENT_GUIDE.md`](RENDER_DEPLOYMENT_GUIDE.md).
+
+- **Runtime:** Docker
+- **Dockerfile:** `backend/Dockerfile`
+- **Docker build context:** `.` (raíz del repositorio)
+- **Health check:** `/health`
+
+Configura en Render las variables secretas `MONGODB_URI`, `JWT_SECRET` y
+`JWT_REFRESH_SECRET`. Configura también:
+
+```env
+NODE_ENV=production
+FRONTEND_URL=https://tu-proyecto.pages.dev
+CORS_ORIGINS=https://tu-proyecto.pages.dev,https://erp.tudominio.com
+```
+
+`CORS_ORIGINS` acepta una lista separada por comas y debe contener cada origen
+web que consumirá la API (protocolo + host, sin rutas). No uses `*` en
+producción. La URL pública del backend responde en `/`, `/health` y `/docs`;
+un `404` en `/` ya no debe aparecer después de desplegar esta revisión.
+
+### Cloudflare Pages (frontend web)
+
+La configuración completa, las comprobaciones de CORS y el diagnóstico del
+bundle están en [`CLOUDFLARE_PAGES_GUIDE.md`](CLOUDFLARE_PAGES_GUIDE.md).
+
+Si Cloudflare muestra una pantalla de **Workers Builds** con un campo adicional
+**Deploy command**, usa `npm run deploy:cloudflare`; el archivo
+`frontend/wrangler.jsonc` publica el directorio `dist` como sitio estático.
+
+Crea un proyecto de Pages conectado al repositorio y utiliza:
+
+- **Root directory:** `frontend`
+- **Build command:** `npm run export:web`
+- **Build output directory:** `dist`
+- **Node.js:** 20
+
+Agrega esta variable en **Production** y **Preview**, ajustándola si usas un
+dominio propio para la API:
+
+```env
+EXPO_PUBLIC_API_URL=https://proyectoerp-api.onrender.com/api/v1
+```
+
+Esta variable se incorpora al bundle durante el build: cambiarla requiere un
+nuevo despliegue de Pages. Los archivos `public/_redirects` y
+`public/_headers` agregan fallback para navegación web y cabeceras básicas de
+seguridad. Finalmente, copia la URL definitiva de Pages a `FRONTEND_URL` y
+`CORS_ORIGINS` en Render y vuelve a desplegar el backend.
+
+> Las URLs `*.pages.dev` de previews cambian por commit. Por seguridad no se
+> habilita un comodín; agrega explícitamente los orígenes de preview que vayas
+> a probar o utiliza el dominio estable de producción.
+
 ### Checklist
 
 - [ ] MongoDB Atlas configurado con replica set

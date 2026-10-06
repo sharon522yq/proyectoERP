@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+node_modules
+**/node_modules
+frontend/*
+!frontend/package.json
+coverage
+*.log
+.env
+.env.*
+!.env.example
