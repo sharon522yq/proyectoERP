@@ -1,5 +1,6 @@
 const { assertCompany, isGlobal } = require('../../utils/companyAccess');
 const bcrypt = require('bcryptjs');
+const Company = require('../companies/company.model');
 const repo = require('./user.repository');
 const roleService = require('../roles/role.service');
 const { ApiError } = require('../../utils/ApiError');
@@ -42,19 +43,27 @@ async function update(id, data, ctx) {
   const prev = await repo.findById(id);
   if (!prev) throw new ApiError(404, 'Usuario no encontrado', 'USER_NOT_FOUND');
   assertCompany(ctx, prev.companyId);
+  if (data.companyId !== undefined) {
+    if (!isGlobal(ctx)) throw new ApiError(403, 'La asignación requiere permisos globales explícitos', 'COMPANY_ASSIGN_FORBIDDEN');
+    if (prev.companyId && String(prev.companyId) !== String(data.companyId)) throw new ApiError(409, 'No se permite transferir usuarios entre empresas', 'COMPANY_TRANSFER_FORBIDDEN');
+    const company = await Company.findById(data.companyId);
+    if (!company || !company.active) throw new ApiError(400, 'Empresa inválida o inactiva', 'INVALID_COMPANY');
+  }
   // Whitelist: solo campos permitidos
   const safe = {};
   for (const key of ALLOWED_UPDATE_FIELDS) {
     if (data[key] !== undefined) safe[key] = data[key];
   }
   if (!isGlobal(ctx) && (prev.role === 'SUPER_ADMIN' || String(safe.role).toUpperCase() === 'SUPER_ADMIN')) throw new ApiError(403, 'Rol global restringido', 'FORBIDDEN');
+  if (data.companyId !== undefined) { safe.companyId = data.companyId; safe.refreshTokenHash = null; }
   if (safe.role) {
     const role = await roleService.findByName(String(safe.role).toUpperCase());
     if (!role) throw new ApiError(400, 'Rol inválido', 'INVALID_ROLE');
     safe.role = role.name;
   }
-  const updated = await repo.update(id, safe);
-  await logAudit({ userId: ctx.userId, companyId: prev.companyId, action: 'UPDATE', module: 'users', documentId: id, previousData: { name: prev.name, role: prev.role }, newData: safe, ip: ctx.ip });
+  const change = data.companyId !== undefined || safe.role !== undefined || safe.active !== undefined;
+  const updated = await repo.update(id, change ? { $set: safe, $inc: { sessionVersion: 1 } } : safe);
+  await logAudit({ userId: ctx.userId, companyId: prev.companyId, action: 'UPDATE', module: 'users', documentId: id, previousData: { name: prev.name, role: prev.role, companyId: prev.companyId }, newData: { name: safe.name, role: safe.role, active: safe.active, companyId: safe.companyId }, ip: ctx.ip });
   return updated.toSafeJSON();
 }
 

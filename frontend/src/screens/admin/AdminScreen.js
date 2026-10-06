@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Button } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 import { adminApi } from '../../services/api';
 import { tokens } from '../../theme/tokens';
 import PageHeader from '../../components/layout/PageHeader';
@@ -8,6 +9,11 @@ import ErrorState from '../../components/data-display/ErrorState';
 import EmptyState from '../../components/data-display/EmptyState';
 
 export default function AdminScreen({ onBack }) {
+  const { user, has } = useAuth();
+  const canAssign = user.role === 'SUPER_ADMIN' && has('*');
+  const [companies, setCompanies] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,6 +28,7 @@ export default function AdminScreen({ onBack }) {
       setError(null);
       const data = await adminApi.getUsers();
       setUsers(data.items || data || []);
+      if (canAssign) setCompanies((await adminApi.getCompanies()).filter(c => c.active));
     } catch (err) {
       setError(err.message || 'Error al cargar usuarios');
     } finally {
@@ -29,11 +36,20 @@ export default function AdminScreen({ onBack }) {
     }
   };
 
+  const assignCompany = async (id, companyId) => {
+    if (saving) return;
+    setSaving(true); setActionError('');
+    try { await adminApi.updateUser(id, { companyId }); await loadUsers(); }
+    catch (err) { setActionError(err.response?.data?.message || 'No se pudo asignar la empresa'); }
+    finally { setSaving(false); }
+  };
+
   return (
     <View style={styles.container}>
       <PageHeader title="Administración de Usuarios y Roles" subtitle="Control de accesos y RBAC" />
       <View style={styles.toolbar}>{onBack ? <Button title="Volver" onPress={onBack} /> : null}</View>
 
+      {!!actionError && <Text accessibilityRole="alert" style={{ color: tokens.colors.error }}>{actionError}</Text>}
       {loading ? (
         <LoadingSkeleton />
       ) : error ? (
@@ -47,6 +63,11 @@ export default function AdminScreen({ onBack }) {
               <View>
                 <Text style={styles.titleText}>{u.name}</Text>
                 <Text style={styles.subText}>{u.email} • Rol: {u.role}</Text>
+                {canAssign && !u.companyId && <View style={{ gap: tokens.spacing.sm, marginTop: tokens.spacing.sm }}>
+                  <Text style={styles.subText}>Asignar empresa. El usuario deberá volver a iniciar sesión.</Text>
+                  {companies.length === 0 && <Text style={styles.subText}>No hay empresas activas disponibles.</Text>}
+                  {companies.map(c => <Button key={c._id} title={`Asignar a ${c.name}`} disabled={saving} onPress={() => assignCompany(u._id, c._id)} />)}
+                </View>}
               </View>
             </View>
           ))}

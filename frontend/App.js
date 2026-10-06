@@ -3,12 +3,15 @@ import React from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth, AuthProvider } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
+import PendingCompanyScreen from './src/screens/PendingCompanyScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 
 function Root() {
   const { user, ready } = useAuth();
   if (!ready) return <ActivityIndicator accessibilityLabel="Cargando sesión" />;
-  return user ? <DashboardScreen /> : <LoginScreen />;
+  if (!user) return <LoginScreen />;
+  if (!user.companyId && user.role !== 'SUPER_ADMIN') return <PendingCompanyScreen />;
+  return <DashboardScreen />;
 }
 
 export default function App() {

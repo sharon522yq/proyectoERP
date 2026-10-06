@@ -6,7 +6,7 @@ import { tokens } from '../theme/tokens';
 import AppWordmark from '../components/branding/AppWordmark';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const initialToken = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('resetToken') || '' : '';
   const [mode, setMode] = useState(initialToken ? 'reset' : 'login');
   const [setupAvailable, setSetupAvailable] = useState(false);

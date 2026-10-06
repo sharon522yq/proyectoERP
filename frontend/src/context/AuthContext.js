@@ -49,6 +49,15 @@ export function AuthProvider({ children }) {
       setStoredToken(STORAGE_KEYS.USER, JSON.stringify(data.user));
       setStoredToken(STORAGE_KEYS.PERMISSIONS, JSON.stringify(data.permissions || []));
     },
+    register: async (payload) => {
+      const data = await authApi.register(payload);
+      setAccessToken(data.accessToken);
+      setRefreshToken(data.refreshToken);
+      setUser(data.user);
+      setPermissions(data.permissions || []);
+      setStoredToken(STORAGE_KEYS.USER, JSON.stringify(data.user));
+      setStoredToken(STORAGE_KEYS.PERMISSIONS, JSON.stringify(data.permissions || []));
+    },
     logout: async () => {
       try { await authApi.logout(); } catch {}
       setAccessToken(null);
