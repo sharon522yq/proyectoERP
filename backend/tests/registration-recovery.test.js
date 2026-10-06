@@ -48,9 +48,12 @@ test('administrador global asigna empresa y registra auditoría', async () => {
   const auth = { Authorization: `Bearer ${admin.body.data.accessToken}` };
   const company = (await request(app).post('/api/v1/companies').set(auth).send({ name: 'Empresa acceso' })).body.data;
   const user = await User.findOne({ email: 'public@example.com' });
+  const previousSession = (await request(app).post('/api/v1/auth/login').send({ email: 'public@example.com', password: 'Password123' })).body.data;
   const assign = await request(app).put(`/api/v1/users/${user._id}`).set(auth).send({ companyId: company._id });
   expect(assign.status).toBe(200);
   expect(assign.body.data.companyId).toBe(company._id);
+  expect((await request(app).get('/api/v1/auth/me').set('Authorization', 'Bearer ' + previousSession.accessToken)).status).toBe(401);
+  expect((await request(app).post('/api/v1/auth/refresh').send({ refreshToken: previousSession.refreshToken })).status).toBe(401);
   const audits = await request(app).get('/api/v1/audit?module=users').set(auth);
   expect(audits.status).toBe(200);
   expect(audits.body.data.total).toBeGreaterThan(0);

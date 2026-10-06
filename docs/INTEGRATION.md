@@ -33,3 +33,10 @@ Merge no equivale a despliegue. Se requiere acceso operativo a Render/Cloudflare
 - CORS/Render en vivo y entrega de correo no se consideran verificados por estas pruebas.
 
 El trabajo no confirmado de C:\proyectoERP se conserva intacto; esta integración se realizó en C:\proyectoERP-integration.
+
+## CI y revisión posterior
+Los primeros jobs backend de GitHub Actions pasaron en Node 22 y 24. El verificador web inicial falló porque el runner no tenía rg; se sustituyó por un script Node que comprueba los mismos artefactos y el destino Render, sin quitar validaciones.
+
+La integración Cloudflare externa reporta que el Worker proyectoerp no existe en la cuenta conectada. Se debe crear/corregir la asociación del Worker mediante acceso a Cloudflare. main no tenía protección ni rulesets al verificar; este check externo no es una protección de rama. No se deshabilitó el check ni se afirmó que el despliegue funciona.
+
+npm audit señaló avisos transitivos del stack Expo/React Native. No se aplicó audit fix --force: proponía downgrades incompatibles de Expo/React Native. La revisión de compatibilidad de estas dependencias permanece pendiente para una entrega de producción; no afecta el resultado de las pruebas ejecutadas ni constituye una validación de seguridad completa.

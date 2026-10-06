@@ -63,8 +63,10 @@ async function update(id, data, ctx) {
     safe.role = role.name;
   }
   const change = data.companyId !== undefined || safe.role !== undefined || safe.active !== undefined;
-  const updated = await User.findByIdAndUpdate(id, change ? { $set: safe, $inc: { sessionVersion: 1 } } : { $set: safe }, { new: true, runValidators: true });
-  await logAudit({ userId: ctx.userId, companyId: prev.companyId, action: 'UPDATE', module: 'users', documentId: id, previousData: { name: prev.name, role: prev.role, companyId: prev.companyId }, newData: { name: safe.name, role: safe.role, active: safe.active, companyId: safe.companyId }, ip: ctx.ip });
+  const filter = data.companyId !== undefined ? { _id: id, companyId: prev.companyId || null } : { _id: id };
+  const updated = await User.findOneAndUpdate(filter, change ? { $set: safe, $inc: { sessionVersion: 1 } } : { $set: safe }, { new: true, runValidators: true });
+  if (!updated) throw new ApiError(409, 'La asignación cambió; actualiza la cuenta', 'COMPANY_ASSIGN_CONFLICT');
+  await logAudit({ userId: ctx.userId, companyId: updated.companyId, action: 'UPDATE', module: 'users', documentId: id, previousData: { name: prev.name, role: prev.role, companyId: prev.companyId }, newData: { name: safe.name, role: safe.role, active: safe.active, companyId: safe.companyId }, ip: ctx.ip });
   return updated.toSafeJSON();
 }
 

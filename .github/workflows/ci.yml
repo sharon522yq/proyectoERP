@@ -36,7 +36,7 @@ jobs:
           test -f frontend/dist/_redirects
           test -f frontend/wrangler.jsonc
           node -e "JSON.parse(require('fs').readFileSync('frontend/wrangler.jsonc', 'utf8'))"
-          rg --quiet 'https://proyectoerp-api.onrender.com/api/v1' frontend/dist/_expo/static/js/web/*.js
+          npm --prefix frontend run verify:web
 
   test:
     runs-on: ubuntu-latest

@@ -12,7 +12,8 @@
     "export:web": "expo export --platform web --output-dir dist --clear",
     "deploy:cloudflare": "npx --yes wrangler@4 deploy",
     "ios": "expo run:ios",
-    "web:render": "expo start --web --localhost --port 8086 --clear"
+    "web:render": "expo start --web --localhost --port 8086 --clear",
+    "verify:web": "node scripts/verify-web-export.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",

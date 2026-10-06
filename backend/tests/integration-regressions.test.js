@@ -62,3 +62,16 @@ test('bcrypt byte limit rejects truncation collisions', async () => {
   await ensureSeeded();
   expect((await request(app).post('/api/v1/auth/register').send({ ...data, password: 'á'.repeat(37) })).status).toBe(400);
 });
+
+test('concurrent company assignment has one winner and preserves revocation', async () => {
+  await ensureSeeded();
+  const target = (await request(app).post('/api/v1/auth/register').send({ ...data })).body.data;
+  const companies = await Company.create([{ name: 'Company A' }, { name: 'Company B' }]);
+  const service = require('../src/modules/users/user.service');
+  const ctx = { userId: target.user._id, permissions: ['*'] };
+  const result = await Promise.allSettled(companies.map(company => service.update(target.user._id, { companyId: company._id }, ctx)));
+  expect(result.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+  expect(result.filter(r => r.status === 'rejected')).toHaveLength(1);
+  expect(result.find(r => r.status === 'rejected').reason.status).toBe(409);
+  expect((await request(app).get('/api/v1/auth/me').set('Authorization', 'Bearer ' + target.accessToken)).status).toBe(401);
+});
