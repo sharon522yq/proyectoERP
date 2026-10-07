@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, ScrollView, StyleSheet, Button, Modal } from 'react-native';
 import { crmApi } from '../../services/api';
 import { tokens } from '../../theme/tokens';
@@ -19,6 +19,11 @@ export default function CrmScreen({ onBack }) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const submitting = useRef(false);
+  const nameInput = useRef(null);
+  const emailInput = useRef(null);
+  const phoneInput = useRef(null);
 
   useEffect(() => {
     loadLeads();
@@ -38,30 +43,39 @@ export default function CrmScreen({ onBack }) {
   };
 
   const handleCreateLead = async () => {
-    if (!name || !email) {
-      setFormError('Nombre y correo son obligatorios');
-      return;
-    }
+    if (submitting.current) return;
+    const value = (ref, state) => typeof ref.current?.value === 'string' ? ref.current.value.trim() : state.trim();
+    const leadName = value(nameInput, name);
+    const leadEmail = value(emailInput, email);
+    const leadPhone = value(phoneInput, phone);
+    if (!leadName || leadName.length > 150) { setFormError('Introduce un nombre de 1 a 150 caracteres'); return; }
+    if (leadEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadEmail)) { setFormError('Introduce un correo válido, por ejemplo nombre@dominio.com, o deja el correo vacío'); return; }
+    if (leadPhone.length > 30) { setFormError('El teléfono admite hasta 30 caracteres'); return; }
     try {
-      setFormError('');
-      await crmApi.createLead({ name: name.trim(), email: email.trim(), phone: phone.trim() });
+      submitting.current = true; setSaving(true); setFormError('');
+      await crmApi.createLead({ name: leadName, ...(leadEmail ? { email: leadEmail } : {}), ...(leadPhone ? { phone: leadPhone } : {}) });
       setModalVisible(false);
       setName('');
       setEmail('');
       setPhone('');
       loadLeads();
     } catch (err) {
-      setFormError((err.response && err.response.data && err.response.data.message) || 'Error al crear lead');
-    }
+      const response = err.response?.data;
+      const labels = { name: 'nombre', email: 'correo electrónico', phone: 'teléfono' };
+      const fields = response?.fields?.map(field => labels[field] || field).join(', ');
+      setFormError(fields ? 'Revisa estos campos: ' + fields : response?.message || 'Error al crear lead');
+    } finally { submitting.current = false; setSaving(false); }
   };
 
   const handleConvert = async (id) => {
+    if (submitting.current) return;
+    submitting.current = true; setSaving(true); setError(null);
     try {
       await crmApi.convertLead(id);
       loadLeads();
     } catch (err) {
-      alert((err.response && err.response.data && err.response.data.message) || 'Error al convertir lead');
-    }
+      setError(err.response?.data?.message || 'Error al convertir lead');
+    } finally { submitting.current = false; setSaving(false); }
   };
 
   return (
@@ -92,11 +106,9 @@ export default function CrmScreen({ onBack }) {
                 <Text style={styles.email}>{l.email} {l.phone ? `• ${l.phone}` : ''}</Text>
               </View>
               <View style={styles.right}>
-                <StatusBadge status={l.status || 'NEW'} />
-                {l.status !== 'CONVERTED' ? (
-                  <TouchableOpacity style={styles.convertBtn} onPress={() => handleConvert(l._id)}>
-                    <Text style={styles.convertText}>Convertir a Cliente</Text>
-                  </TouchableOpacity>
+                <StatusBadge status={l.customerId ? 'CONVERTED' : l.status || 'NEW'} />
+                {!l.customerId && !l.convertedAt ? (
+                  <Button title="Convertir a Cliente" disabled={saving} onPress={() => handleConvert(l._id)} />
                 ) : null}
               </View>
             </View>
@@ -108,13 +120,13 @@ export default function CrmScreen({ onBack }) {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, tokens.shadows.lg]}>
             <Text style={styles.modalTitle}>Crear Nuevo Lead</Text>
-            <TextInput style={styles.input} placeholder="Nombre completo" value={name} onChangeText={setName} />
-            <TextInput style={styles.input} placeholder="Correo electrónico" value={email} onChangeText={setEmail} autoCapitalize="none" />
-            <TextInput style={styles.input} placeholder="Teléfono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <TextInput style={styles.input} ref={nameInput} accessibilityLabel="Nombre del lead" maxLength={150} editable={!saving} placeholder="Nombre completo" value={name} onChangeText={setName} />
+            <TextInput style={styles.input} ref={emailInput} accessibilityLabel="Correo del lead" keyboardType="email-address" autoComplete="email" editable={!saving} placeholder="Correo electrónico (opcional)" value={email} onChangeText={setEmail} autoCapitalize="none" />
+            <TextInput style={styles.input} ref={phoneInput} accessibilityLabel="Teléfono del lead" maxLength={30} editable={!saving} placeholder="Teléfono (opcional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             {!!formError && <Text style={styles.error}>{formError}</Text>}
             <View style={styles.modalActions}>
-              <Button title="Cancelar" color="#64748b" onPress={() => setModalVisible(false)} />
-              <Button title="Guardar Lead" onPress={handleCreateLead} />
+              <Button title="Cancelar" disabled={saving} color="#64748b" onPress={() => setModalVisible(false)} />
+              <Button title="Guardar Lead" disabled={saving} onPress={handleCreateLead} />
             </View>
           </View>
         </View>
