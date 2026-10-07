@@ -55,7 +55,7 @@ export default function InventoryScreen({ onBack }) {
       return;
     }
     try {
-      setFormError('');
+      setFormError(''); setSaving(true);
       await inventoryApi.adjustStock({
         productId: productId.trim(),
         warehouseId: warehouseId.trim(),
@@ -71,7 +71,7 @@ export default function InventoryScreen({ onBack }) {
       loadStock();
     } catch (err) {
       setFormError((err.response && err.response.data && err.response.data.message) || 'Error al ajustar stock');
-    }
+    } finally { setSaving(false); }
   };
 
   return (

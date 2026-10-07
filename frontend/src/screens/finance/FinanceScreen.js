@@ -23,13 +23,13 @@ export default function FinanceScreen({ onBack }) {
       setLoading(true);
       setError(null);
       const [sumData, txData] = await Promise.all([
-        financeApi.getSummary().catch(() => null),
-        financeApi.getTransactions().catch(() => [])
+        financeApi.getSummary(),
+        financeApi.getTransactions()
       ]);
       setSummary(sumData);
       setTransactions(txData.items || txData || []);
     } catch (err) {
-      setError(err.message || 'Error al cargar finanzas');
+      setError(err.response?.data?.message || 'No se pudieron cargar los datos financieros. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,9 @@ export default function FinanceScreen({ onBack }) {
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           <View style={styles.metricsRow}>
-            <MetricCard title="Balance Total" value={`$${summary?.balance || 0}`} />
+            <MetricCard title="Activos" value={'$' + String(summary?.assets ?? 0)} />
+            <MetricCard title="Pasivos" value={'$' + String(summary?.liabilities ?? 0)} />
+            <MetricCard title="Ingresos netos" value={'$' + String(summary?.netIncome ?? 0)} />
             <MetricCard title="Transacciones" value={transactions.length} color={tokens.colors.secondary} />
           </View>
           <Text style={styles.sectionTitle}>Últimas Transacciones</Text>
