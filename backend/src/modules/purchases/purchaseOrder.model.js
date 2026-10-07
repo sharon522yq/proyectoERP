@@ -4,12 +4,14 @@ const purchaseOrderSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
   folio: { type: String, required: true, trim: true },
+  warehouseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Warehouse' },
   supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
   items: [{
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     description: String,
     quantity: { type: Number, required: true, min: 1 },
     unitCost: { type: Number, required: true, min: 0 },
+    taxRate: { type: Number, default: 0, min: 0, max: 100 },
     subtotal: { type: Number, required: true }
   }],
   subtotal: { type: Number, required: true },

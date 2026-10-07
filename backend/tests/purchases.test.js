@@ -62,3 +62,24 @@ describe('Security - Purchases', () => {
     expect(res.status).toBe(401);
   });
 });
+
+test('receipt rollback preserves stock and purchase status when finance fails', async () => {
+  const Warehouse = require('../src/modules/inventory/warehouse.model');
+  const Inventory = require('../src/modules/inventory/inventory.model');
+  const Order = require('../src/modules/purchases/purchaseOrder.model');
+  const finance = require('../src/modules/finance/finance.service');
+  const wh = await Warehouse.create({ companyId, name: 'Recepción QA', code: 'RECEIPT-QA' });
+  const created = await request(app).post('/api/v1/purchases').set('Authorization', 'Bearer ' + token).send({ supplierId, warehouseId: String(wh._id), items: [{ productId, quantity: 5, unitCost: 10, taxRate: 16 }] });
+  expect(created.status).toBe(201); expect(created.body.data.total).toBe(58); expect(created.body.data.items[0].taxRate).toBe(16);
+  const id = created.body.data._id;
+  const change = status => request(app).put('/api/v1/purchases/' + id + '/status').set('Authorization', 'Bearer ' + token).send({ status });
+  expect((await change('CONFIRMED')).status).toBe(200);
+  const spy = jest.spyOn(finance, 'postSystemTransaction').mockRejectedValueOnce(new Error('Temporary receipt failure'));
+  try { expect((await change('RECEIVED')).status).toBe(500); } finally { spy.mockRestore(); }
+  expect(await Inventory.countDocuments({ warehouseId: wh._id })).toBe(0);
+  expect((await Order.findById(id)).status).toBe('CONFIRMED');
+  expect((await change('RECEIVED')).status).toBe(200);
+  expect((await Inventory.findOne({ warehouseId: wh._id, productId })).quantity).toBe(5);
+  expect((await change('RECEIVED')).status).toBe(400);
+  expect((await Inventory.findOne({ warehouseId: wh._id, productId })).quantity).toBe(5);
+});

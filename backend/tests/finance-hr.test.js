@@ -91,3 +91,11 @@ describe('Security - Finance/HR', () => {
     expect(res.status).toBe(401);
   });
 });
+
+test('employee codes give a clear conflict and search treats punctuation literally', async () => {
+  const auth = { Authorization: 'Bearer ' + token };
+  expect((await request(app).post('/api/v1/hr/employees').set(auth).send({ employeeId: 'EMP001', name: 'Duplicado' })).body.code).toBe('EMPLOYEE_CODE_TAKEN');
+  const result = await request(app).get('/api/v1/hr/employees').query({ search: '[' }).set(auth);
+  expect(result.status).toBe(200); expect(result.body.data.items).toEqual([]);
+  expect((await request(app).post('/api/v1/hr/employees').set(auth).send({ employeeId: 'INVALID', name: 'Fecha inválida', hireDate: 'no-es-fecha' })).status).toBe(400);
+});

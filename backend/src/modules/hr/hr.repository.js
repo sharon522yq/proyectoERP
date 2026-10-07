@@ -1,3 +1,4 @@
+const searchText = require('../../utils/searchText');
 const Department = require('./department.model');
 const Employee = require('./employee.model');
 
@@ -13,8 +14,9 @@ async function updateDepartment(id, data) {
 
 async function createEmployee(data) { return Employee.create(data); }
 async function findEmployeeById(id) { return Employee.findById(id); }
-async function listEmployees(companyId, { page = 1, limit = 20, departmentId, status } = {}) {
+async function listEmployees(companyId, { page = 1, limit = 20, departmentId, status, search } = {}) {
   const filter = { companyId };
+  if (search) filter.$or = [{ name: { $regex: searchText(search), $options: 'i' } }, { employeeId: { $regex: searchText(search), $options: 'i' } }];
   if (departmentId) filter.departmentId = departmentId;
   if (status) filter.status = status;
   const skip = (page - 1) * limit;

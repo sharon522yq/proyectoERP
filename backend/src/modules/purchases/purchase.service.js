@@ -1,3 +1,5 @@
+const money = require('../../utils/money');
+const atomic = require('../../utils/atomic');
 const repo = require('./purchase.repository');
 const customerRepo = require('../crm/customer.repository');
 const productRepo = require('../products/product.repository');
@@ -28,15 +30,19 @@ async function create(data, ctx) {
       throw new ApiError(404, `Producto no encontrado: ${item.productId}`, 'PRODUCT_NOT_FOUND');
     }
   }
+  if (data.warehouseId) {
+    const warehouse = await inventoryService.getWarehouse(data.warehouseId, ctx);
+    if (!warehouse.active) throw new ApiError(400, 'Selecciona un almacén activo para recibir la compra.', 'WAREHOUSE_INACTIVE');
+  }
   const folio = await repo.nextFolio(ctx.companyId, 'OC');
   let subtotal = 0;
   for (const item of data.items) {
-    item.subtotal = item.quantity * item.unitCost;
+    item.subtotal = money(item.quantity * item.unitCost);
     subtotal += item.subtotal;
   }
-  const taxTotal = data.items.reduce((sum, i) => sum + i.subtotal * (i.taxRate || 0) / 100, 0);
+  const taxTotal = money(data.items.reduce((sum, i) => sum + money(i.subtotal * (i.taxRate || 0) / 100), 0));
   const order = await repo.create({
-    ...data, folio, subtotal, taxTotal, total: subtotal + taxTotal,
+    ...data, status: 'DRAFT', folio, subtotal: money(subtotal), taxTotal, total: money(subtotal + taxTotal),
     companyId: ctx.companyId, branchId: ctx.branchId, requestedBy: ctx.userId
   });
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'CREATE', module: 'purchases.orders', documentId: String(order._id), newData: { folio, total: order.total }, ip: ctx.ip });
@@ -52,7 +58,9 @@ async function receiveStock(order, ctx) {
   if (!warehouses.length) {
     throw new ApiError(400, 'La empresa no tiene almacenes configurados; crea uno antes de recibir compras', 'WAREHOUSE_REQUIRED');
   }
-  const warehouse = warehouses[0];
+  if (!order.warehouseId && warehouses.length > 1) throw new ApiError(400, 'Esta compra no tiene almacén de recepción. Define el almacén antes de recibirla.', 'WAREHOUSE_REQUIRED');
+  const warehouse = order.warehouseId ? warehouses.find(w => String(w._id) === String(order.warehouseId)) : warehouses[0];
+  if (!warehouse) throw new ApiError(400, 'El almacén de recepción ya no está disponible. Revisa su configuración.', 'WAREHOUSE_REQUIRED');
   const grouped = new Map();
   for (const item of order.items) {
     const key = String(item.productId);
@@ -67,7 +75,8 @@ async function receiveStock(order, ctx) {
   }
 }
 
-async function updateStatus(id, status, ctx) {
+async function updateStatus(id, status, ctx, warehouseId) {
+  await require('./purchaseOrder.model').updateOne({ _id: id, companyId: ctx.companyId }, { $inc: { __v: 1 } });
   const order = await repo.findById(id);
   if (!order || String(order.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Orden de compra no encontrada', 'PURCHASE_ORDER_NOT_FOUND');
   const allowed = ORDER_TRANSITIONS[order.status] || [];
@@ -75,6 +84,7 @@ async function updateStatus(id, status, ctx) {
     throw new ApiError(400, `Transición de estado inválida: ${order.status} → ${status || '(vacío)'}`, 'INVALID_STATUS_TRANSITION');
   }
   if (status === 'RECEIVED') {
+    if (warehouseId) order.warehouseId = warehouseId;
     await receiveStock(order, ctx);
     // Enlace con Finanzas (D-010): la recepción reconoce Cuentas por Pagar
     await financeService.postSystemTransaction({
@@ -85,9 +95,9 @@ async function updateStatus(id, status, ctx) {
       referenceType: 'PURCHASE_ORDER', referenceId: order._id, category: 'COMPRAS'
     });
   }
-  const updated = await repo.update(id, { status });
+  const updated = await repo.update(id, { status, ...(order.warehouseId ? { warehouseId: order.warehouseId } : {}) });
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'UPDATE', module: 'purchases.orders', documentId: id, previousData: { status: order.status }, newData: { status }, ip: ctx.ip });
   return updated;
 }
 
-module.exports = { create, list, updateStatus };
+module.exports = { create, list, updateStatus: atomic(updateStatus) };

@@ -1,3 +1,4 @@
+const searchText = require('../../utils/searchText');
 const Product = require('./product.model');
 
 async function create(data) { return Product.create(data); }
@@ -7,7 +8,7 @@ async function list(companyId, { page = 1, limit = 20, categoryId, status, searc
   const filter = { companyId, deletedAt: null };
   if (categoryId) filter.categoryId = categoryId;
   if (status) filter.status = status;
-  if (search) filter.$or = [{ name: { $regex: search, $options: 'i' } }, { sku: { $regex: search, $options: 'i' } }];
+  if (search) filter.$or = [{ name: { $regex: searchText(search), $options: 'i' } }, { sku: { $regex: searchText(search), $options: 'i' } }];
   const skip = (page - 1) * limit;
   const [items, total] = await Promise.all([
     Product.find(filter).sort({ name: 1 }).skip(skip).limit(limit).lean(),

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { MENU_BY_PERMISSION } from '../../constants/config';
 import { tokens } from '../../theme/tokens';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
-export default function AppShell({ currentRoute, onSelectRoute, children }) {
+export default function AppShell({ currentRoute, onSelectRoute, children, visibleRoutes }) {
   const { has } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -14,7 +15,7 @@ export default function AppShell({ currentRoute, onSelectRoute, children }) {
   return (
     <View style={styles.container}>
       {isDesktop ? (
-        <Sidebar currentRoute={currentRoute} onSelectRoute={onSelectRoute} hasPermission={has} />
+        <Sidebar currentRoute={currentRoute} onSelectRoute={onSelectRoute} hasPermission={has} visibleRoutes={visibleRoutes} />
       ) : mobileOpen ? (
         <View style={styles.mobileDrawer}>
           <Sidebar
@@ -29,7 +30,7 @@ export default function AppShell({ currentRoute, onSelectRoute, children }) {
       <View style={styles.main}>
         <TopBar
           onToggleMobileMenu={!isDesktop ? () => setMobileOpen(!mobileOpen) : null}
-          title={currentRoute.toUpperCase()}
+          title={MENU_BY_PERMISSION.find(item => item.route === currentRoute)?.label || 'NexusERP'}
         />
         <View style={styles.content}>{children}</View>
       </View>

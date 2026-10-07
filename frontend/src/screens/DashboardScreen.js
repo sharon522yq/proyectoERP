@@ -20,6 +20,7 @@ import FinanceScreen from './finance/FinanceScreen';
 import HrScreen from './hr/HrScreen';
 import ProjectsScreen from './projects/ProjectsScreen';
 import ProductionScreen from './production/ProductionScreen';
+import SettingsScreen from './settings/SettingsScreen';
 import AdminScreen from './admin/AdminScreen';
 import AuditScreen from './audit/AuditScreen';
 import AIAssistantScreen from './AIAssistantScreen';
@@ -50,7 +51,7 @@ export default function DashboardScreen() {
     }
   };
 
-  const menu = MENU_BY_PERMISSION.filter((m) => m.route !== 'dashboard' && (!m.permission || has(m.permission)));
+  const menu = MENU_BY_PERMISSION.filter((m) => m.route !== 'dashboard' && (!m.permission || has(m.permission)) && (!['hr', 'projects', 'production', 'ai'].includes(m.route) || summary?.enabledModules?.includes(m.route)));
 
   const renderContent = () => {
     switch (currentRoute) {
@@ -72,6 +73,8 @@ export default function DashboardScreen() {
         return <ProjectsScreen onBack={() => setCurrentRoute('dashboard')} />;
       case 'production':
         return <ProductionScreen onBack={() => setCurrentRoute('dashboard')} />;
+      case 'settings':
+        return <SettingsScreen onBack={() => setCurrentRoute('dashboard')} />;
       case 'admin':
         return <AdminScreen onBack={() => setCurrentRoute('dashboard')} />;
       case 'audit':
@@ -131,7 +134,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <AppShell currentRoute={currentRoute} onSelectRoute={setCurrentRoute}>
+    <AppShell visibleRoutes={['dashboard', ...menu.map(item => item.route)]} currentRoute={currentRoute} onSelectRoute={setCurrentRoute}>
       {renderContent()}
     </AppShell>
   );

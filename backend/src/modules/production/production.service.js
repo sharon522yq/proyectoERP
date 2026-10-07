@@ -1,3 +1,4 @@
+const atomic = require('../../utils/atomic');
 const repo = require('./production.repository');
 const productRepo = require('../products/product.repository');
 const inventoryRepo = require('../inventory/inventory.repository');
@@ -32,6 +33,8 @@ async function createBom(data, ctx) {
     totalMaterialCost += item.totalCost;
   }
 
+  if (new Set(data.items.map(item => String(item.componentProductId))).size !== data.items.length)
+    throw new ApiError(400, 'Cada material debe aparecer una sola vez en la receta. Suma sus cantidades en una partida.', 'DUPLICATE_COMPONENT');
   const bom = await repo.createBom({ ...data, companyId: ctx.companyId, totalMaterialCost });
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'CREATE', module: 'production.bom', documentId: String(bom._id), newData: { name: bom.name, productId: String(bom.productId) }, ip: ctx.ip });
   return bom;
@@ -68,7 +71,7 @@ async function createProductionOrder(data, ctx) {
   const totalCost = materialCost + (data.laborCost || 0) + (data.overheadCost || 0);
 
   const order = await repo.createProductionOrder({
-    ...data, folio, companyId: ctx.companyId, branchId: ctx.branchId,
+    ...data, status: 'DRAFT', materialRequirements: bom.items.map(item => ({ componentProductId: item.componentProductId, quantity: item.quantity, unitCost: item.unitCost })), folio, companyId: ctx.companyId, branchId: ctx.branchId,
     materialCost, totalCost, unitCost: totalCost / data.quantity,
     createdBy: ctx.userId
   });
@@ -86,6 +89,8 @@ async function getProductionOrder(id, ctx) {
 }
 
 async function updateProductionOrderStatus(id, status, ctx) {
+  await require('./productionOrder.model').updateOne({ _id: id, companyId: ctx.companyId }, { $inc: { __v: 1 } });
+  if (status === 'COMPLETED') return completeProduction(id, ctx);
   const order = await repo.findProductionOrderById(id);
   if (!order || String(order.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Orden de producción no encontrada', 'PRODUCTION_ORDER_NOT_FOUND');
 
@@ -102,6 +107,10 @@ async function updateProductionOrderStatus(id, status, ctx) {
     throw new ApiError(400, `No se puede cambiar de ${order.status} a ${status}`, 'INVALID_STATUS_TRANSITION');
   }
 
+  if (status === 'CANCELLED') {
+    const consumed = await repo.listMaterialConsumptions(ctx.companyId, { productionOrderId: id, limit: 1 });
+    if (consumed.items.length) throw new ApiError(409, 'La orden tiene materiales consumidos. Revisa su devolución antes de cancelarla.', 'CONSUMPTION_RETURN_REQUIRED');
+  }
   const updateData = { status };
   if (status === 'IN_PROGRESS') updateData.actualStartDate = new Date();
   if (status === 'COMPLETED' || status === 'CANCELLED') updateData.actualEndDate = new Date();
@@ -151,6 +160,7 @@ async function updateWorkOrderStatus(id, status, ctx) {
 
 // ---- Material Consumption ----
 async function consumeMaterials(productionOrderId, ctx) {
+  await require('./productionOrder.model').updateOne({ _id: productionOrderId, companyId: ctx.companyId }, { $inc: { __v: 1 } });
   const order = await repo.findProductionOrderById(productionOrderId);
   if (!order || String(order.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Orden de producción no encontrada', 'PRODUCTION_ORDER_NOT_FOUND');
   if (!['RELEASED', 'IN_PROGRESS'].includes(order.status)) throw new ApiError(400, 'La orden debe estar RELEASED o IN_PROGRESS', 'INVALID_STATUS');
@@ -158,8 +168,16 @@ async function consumeMaterials(productionOrderId, ctx) {
   const bom = await repo.findBomById(order.bomId);
   if (!bom) throw new ApiError(404, 'BOM no encontrada', 'BOM_NOT_FOUND');
 
+  const existing = await repo.listMaterialConsumptions(ctx.companyId, { productionOrderId, limit: 1000 });
+  if (existing.items.length) {
+    const requirements = order.materialRequirements?.length ? order.materialRequirements : bom.items;
+    const complete = requirements.every(item => existing.items.filter(c => String(c.productId) === String(item.componentProductId) && c.status === 'COMPLETED')
+      .reduce((sum, c) => sum + c.quantityConsumed, 0) === item.quantity * order.quantity);
+    if (!complete) throw new ApiError(409, 'Esta orden tiene consumos incompletos. Revisa sus movimientos antes de continuar.', 'INCOMPLETE_CONSUMPTION');
+    return existing.items;
+  }
   const consumptions = [];
-  for (const bomItem of bom.items) {
+  for (const bomItem of (order.materialRequirements?.length ? order.materialRequirements : bom.items)) {
     const qtyRequired = bomItem.quantity * order.quantity;
 
     // Check stock availability
@@ -211,13 +229,19 @@ async function consumeMaterials(productionOrderId, ctx) {
 
 // ---- Complete Production ----
 async function completeProduction(productionOrderId, ctx) {
+  await require('./productionOrder.model').updateOne({ _id: productionOrderId, companyId: ctx.companyId }, { $inc: { __v: 1 } });
   const order = await repo.findProductionOrderById(productionOrderId);
   if (!order || String(order.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Orden de producción no encontrada', 'PRODUCTION_ORDER_NOT_FOUND');
+  if (order.status === 'COMPLETED') return order;
   if (order.status !== 'IN_PROGRESS') throw new ApiError(400, 'La orden debe estar IN_PROGRESS', 'INVALID_STATUS');
 
   // Verify all materials consumed
   const consumptions = await repo.listMaterialConsumptions(ctx.companyId, { productionOrderId, limit: 1000 });
-  const allConsumed = consumptions.items.every(c => c.status === 'COMPLETED');
+  const bom = await repo.findBomById(order.bomId);
+  const requirements = order.materialRequirements?.length ? order.materialRequirements : bom?.items;
+  const allConsumed = bom && String(bom.companyId) === String(ctx.companyId) && requirements.length > 0 &&
+    requirements.every(item => consumptions.items.filter(c => String(c.productId) === String(item.componentProductId) && c.status === 'COMPLETED')
+      .reduce((sum, c) => sum + c.quantityConsumed, 0) === item.quantity * order.quantity);
   if (!allConsumed) throw new ApiError(400, 'No todos los materiales han sido consumidos', 'MATERIALS_NOT_CONSUMED');
 
   // Create finished product entry in inventory
@@ -252,7 +276,7 @@ async function completeProduction(productionOrderId, ctx) {
 
 module.exports = {
   createBom, listBoms, getBom,
-  createProductionOrder, listProductionOrders, getProductionOrder, updateProductionOrderStatus,
+  createProductionOrder, listProductionOrders, getProductionOrder, updateProductionOrderStatus: atomic(updateProductionOrderStatus),
   createWorkOrder, listWorkOrders, updateWorkOrderStatus,
-  consumeMaterials, completeProduction
+  consumeMaterials: atomic(consumeMaterials), completeProduction: atomic(completeProduction)
 };

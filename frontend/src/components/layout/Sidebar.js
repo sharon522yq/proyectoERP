@@ -4,8 +4,8 @@ import { MENU_BY_PERMISSION } from '../../constants/config';
 import { tokens } from '../../theme/tokens';
 import AppWordmark from '../branding/AppWordmark';
 
-export default function Sidebar({ currentRoute, onSelectRoute, hasPermission, onCloseMobile }) {
-  const menu = MENU_BY_PERMISSION.filter((m) => !m.permission || hasPermission(m.permission));
+export default function Sidebar({ currentRoute, onSelectRoute, hasPermission, onCloseMobile, visibleRoutes }) {
+  const menu = MENU_BY_PERMISSION.filter((m) => (!m.permission || hasPermission(m.permission)) && (!visibleRoutes || visibleRoutes.includes(m.route)));
 
   return (
     <View style={styles.sidebar}>

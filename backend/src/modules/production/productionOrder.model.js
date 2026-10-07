@@ -4,6 +4,11 @@ const productionOrderSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
   folio: { type: String, required: true, trim: true },
+  materialRequirements: [{
+    componentProductId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    quantity: { type: Number, required: true, min: 0.000001 },
+    unitCost: { type: Number, default: 0 }
+  }],
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
   bomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Bom', required: true },
   warehouseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Warehouse', required: true },

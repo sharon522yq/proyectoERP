@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const transactionSchema = new mongoose.Schema({
+  requestId: { type: String, maxlength: 80 },
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
   accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true, index: true },
@@ -17,4 +18,5 @@ const transactionSchema = new mongoose.Schema({
 transactionSchema.index({ companyId: 1, date: -1 });
 transactionSchema.index({ companyId: 1, accountId: 1 });
 
+transactionSchema.index({ companyId: 1, requestId: 1 }, { unique: true, partialFilterExpression: { requestId: { $type: 'string' } } });
 module.exports = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);

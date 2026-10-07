@@ -11,6 +11,13 @@ async function main() {
     process.exit(1);
   }
   await connectDB(env.mongoUri);
+  // Serve mutations only after the uniqueness and stock indexes are ready.
+  await Promise.all([
+    require('./modules/sales/payment.model').init(),
+    require('./modules/finance/transaction.model').init(),
+    require('./modules/inventory/inventory.model').init(),
+    require('./modules/audit/audit.model').init()
+  ]);
   await ensureSeeded();
   await seedUnits();
   const app = createApp();

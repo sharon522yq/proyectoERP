@@ -1,3 +1,4 @@
+const { requireEnabledModule } = require('../../middlewares/modules');
 const { Router } = require('express');
 const { authenticate, requirePermission, scopeCompany } = require('../../middlewares/auth');
 const { validate } = require('../../middlewares/http');
@@ -5,7 +6,7 @@ const v = require('./production.validation');
 const ctrl = require('./production.controller');
 
 const router = Router();
-router.use(authenticate, scopeCompany);
+router.use(authenticate, scopeCompany, requireEnabledModule('production'));
 
 // BOM
 router.post('/bom', requirePermission('production.bom.create'), v.createBom, validate, ctrl.createBom);
