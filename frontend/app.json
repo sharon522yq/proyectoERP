@@ -17,6 +17,11 @@
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": []
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "27f46724-c2f3-481c-8ea8-461a36e8ca57"
+      }
+    }
   }
 }
