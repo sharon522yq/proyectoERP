@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const invoiceSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
+  issuerName: String,
+  customerName: String,
   folio: { type: String, required: true, trim: true },
   salesOrderId: { type: mongoose.Schema.Types.ObjectId, ref: 'SalesOrder' },
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
