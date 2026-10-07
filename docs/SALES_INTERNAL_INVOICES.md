@@ -19,5 +19,6 @@ No es CFDI ni incluye timbrado fiscal. No registra un pago automáticamente.
 
 - tests/internal-invoices.test.js: recorrido API, reintentos concurrentes, stock insuficiente, reversión ante fallo contable, impuestos/descuentos.
 - frontend/scripts/invoice-document.test.js: contenido y escape HTML al imprimir.
-- tests/sales-browser.qa.js: navegador con solicitudes Render interceptadas hacia un backend real temporal y MongoDB temporal. No se envían credenciales ni escrituras a producción. Requiere Chrome de QA con CDP en 9336, puertos 8090/8091 libres y exportación web en frontend/dist.
+- tests/sales-browser.qa.js: navegador con solicitudes Render interceptadas hacia un backend real temporal y MongoDB temporal. No se envían credenciales ni escrituras a producción. Requiere Chrome de QA con CDP en 9337, puertos 8090/8091 libres y exportación web en frontend/dist.
 - La prueba de impresión captura el HTML generado, sin operar una impresora física ni validar el diálogo de impresión del sistema.
+
