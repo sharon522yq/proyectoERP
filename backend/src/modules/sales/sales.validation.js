@@ -12,6 +12,13 @@ const createQuote = [
   body('items.*.productId').isMongoId(),
   body('items.*.quantity').isInt({ min: 1 }),
   body('items.*.unitPrice').isFloat({ min: 0 }),
+  body('items.*.taxRate').optional().isFloat({ min: 0, max: 100 }),
+  body('items.*.discount').optional().isFloat({ min: 0 }).custom((value, { req, path }) => {
+    const index = path.match(/\[(\d+)\]/)?.[1];
+    const item = req.body.items[index];
+    if (Number(value) > Number(item.quantity) * Number(item.unitPrice)) throw new Error('El descuento excede el importe de la partida');
+    return true;
+  }),
 ];
 const createPayment = [
   body('amount').isFloat({ min: 0.01 }),

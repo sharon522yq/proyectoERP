@@ -1,3 +1,6 @@
+const mongoose = require('mongoose');
+// Propagate transaction sessions through sales, inventory, finance and audit.
+mongoose.set('transactionAsyncLocalStorage', true);
 const repo = require('./sales.repository');
 const customerRepo = require('../crm/customer.repository');
 const productRepo = require('../products/product.repository');
@@ -131,8 +134,17 @@ async function createInvoiceFromOrder(orderId, ctx) {
   const order = await repo.findOrderById(orderId);
   if (!order || String(order.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Pedido no encontrado', 'ORDER_NOT_FOUND');
   if (!['CONFIRMED', 'PREPARING', 'SHIPPED', 'DELIVERED'].includes(order.status)) throw new ApiError(400, 'El pedido debe estar confirmado', 'ORDER_NOT_CONFIRMED');
+  const Invoice = require('./invoice.model');
+  const existing = await Invoice.findOne({ companyId: ctx.companyId, salesOrderId: order._id, deletedAt: null });
+  if (existing) return existing;
+  // Writing the order serializes concurrent invoice requests within the transaction.
+  const invoiceId = new mongoose.Types.ObjectId();
+  await repo.updateOrder(orderId, { invoiceId });
+  const company = await require('../companies/company.model').findById(ctx.companyId);
+  const customer = await customerRepo.findById(order.customerId);
   const folio = await repo.nextFolio(ctx.companyId, 'FAC');
   const invoice = await repo.createInvoice({
+    _id: invoiceId, issuerName: company?.name, customerName: customer?.name,
     folio, salesOrderId: order._id, customerId: order.customerId, items: order.items,
     subtotal: order.subtotal, discountTotal: order.discountTotal, taxTotal: order.taxTotal, total: order.total,
     currency: order.currency, companyId: ctx.companyId, branchId: ctx.branchId,
@@ -188,4 +200,11 @@ async function registerPayment(invoiceId, data, ctx) {
 
 async function listPayments(ctx, query) { return repo.listPayments(ctx.companyId, query); }
 
-module.exports = { createQuote, listQuotes, approveQuote, createOrderFromQuote, listOrders, updateOrderStatus, createInvoiceFromOrder, listInvoices, registerPayment, listPayments };
+const atomic = fn => (...args) => mongoose.connection.transaction(() => fn(...args));
+module.exports = {
+  createQuote, listQuotes, approveQuote,
+  createOrderFromQuote: atomic(createOrderFromQuote), listOrders,
+  updateOrderStatus: atomic(updateOrderStatus),
+  createInvoiceFromOrder: atomic(createInvoiceFromOrder), listInvoices,
+  registerPayment, listPayments
+};

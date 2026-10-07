@@ -4,6 +4,7 @@ const salesOrderSchema = new mongoose.Schema({
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
   folio: { type: String, required: true, trim: true },
+  invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
   quoteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Quote' },
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
   items: [{

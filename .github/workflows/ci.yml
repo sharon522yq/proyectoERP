@@ -40,7 +40,7 @@ jobs:
         run: npm run export:web
 
       - name: Test Workers SPA export validation
-        run: node --test frontend/scripts/verify-web-export.test.js
+        run: node --test frontend/scripts/*.test.js
 
       - name: Validate Cloudflare deployment inputs
         run: |
