@@ -1,7 +1,7 @@
 const Product = require('./product.model');
 
 async function create(data) { return Product.create(data); }
-async function findById(id) { return Product.findById(id); }
+async function findById(id) { return Product.findOne({ _id: id, deletedAt: null }); }
 async function findBySku(companyId, sku) { return Product.findOne({ companyId, sku }); }
 async function list(companyId, { page = 1, limit = 20, categoryId, status, search } = {}) {
   const filter = { companyId, deletedAt: null };

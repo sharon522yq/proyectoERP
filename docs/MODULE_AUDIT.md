@@ -8,8 +8,8 @@ Auditoría sobre main a3502e7. Las pruebas usan MongoDB temporal separado y dato
 | --- | --- | --- |
 | Dashboard | Inicio de sesión y navegación a las doce pantallas | Las métricas de facturación no demuestran cobros |
 | CRM | Alta de lead y conversión cubiertas por pruebas; pantalla carga | Sin gestión completa de contactos, actividades ni clientes |
-| Productos | Alta, búsqueda y listado; API cubierta por pruebas | Sin edición/eliminación ni paginación completa |
-| Inventario | Almacenes, existencias y ajustes; API y pantalla | Sin transferencias/Kardex en pantalla |
+| Productos | Alta, búsqueda, listado, eliminación y activación/desactivación; API cubierta por pruebas | Sin edición de campos ni paginación completa |
+| Inventario | Almacenes con detalle, edición, baja, activación, existencias, ajustes e historial; API y pantalla | Sin transferencias entre almacenes en pantalla |
 | Ventas | Cotización, pedido, confirmación e invoice interna; pruebas transaccionales | Sin formulario de cobros; PDF web usa diálogo de impresión; Android comparte texto |
 | Compras | API de órdenes/recepción cubierta y listado carga | Faltan formularios de proveedores, alta y recepción |
 | Finanzas | Resumen y movimientos; pantalla verifica activos sintéticos | Faltan formularios contables; no certifica contabilidad fiscal |

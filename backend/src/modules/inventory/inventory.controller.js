@@ -8,6 +8,8 @@ const createWarehouse = asyncHandler(async (req, res) => { res.status(201).json(
 const listWarehouses = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.listWarehouses(ctx(req)) }); });
 const getWarehouse = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.getWarehouse(req.params.id, ctx(req)) }); });
 
+const updateWarehouse = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.updateWarehouse(req.params.id, req.body, ctx(req)) }); });
+const deleteWarehouse = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.deleteWarehouse(req.params.id, ctx(req)) }); });
 // Stock
 const getStock = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.getStock(ctx(req), req.query) }); });
 const adjustStock = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.adjustStock(req.body.productId, req.body.warehouseId, req.body.quantity, req.body.type, req.body.reason, ctx(req)) }); });
@@ -16,4 +18,4 @@ const adjustStock = asyncHandler(async (req, res) => { res.json({ success: true,
 const listMovements = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.listMovements(ctx(req), req.query) }); });
 const kardex = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.kardex(req.params.productId, req.params.warehouseId, ctx(req)) }); });
 
-module.exports = { createWarehouse, listWarehouses, getWarehouse, getStock, adjustStock, listMovements, kardex };
+module.exports = { updateWarehouse, deleteWarehouse, createWarehouse, listWarehouses, getWarehouse, getStock, adjustStock, listMovements, kardex };

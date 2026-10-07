@@ -8,12 +8,12 @@ const { logAudit } = require('../../middlewares/audit');
 async function createBom(data, ctx) {
   if (!data.productId || !data.items || !data.items.length) throw new ApiError(400, 'productId e items son requeridos', 'VALIDATION_ERROR');
   const product = await productRepo.findById(data.productId);
-  if (!product || String(product.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Producto no encontrado', 'PRODUCT_NOT_FOUND');
+  if (!product || product.status !== 'ACTIVE' || String(product.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Producto no encontrado', 'PRODUCT_NOT_FOUND');
 
   // Validate all component products belong to same company
   for (const item of data.items) {
     const comp = await productRepo.findById(item.componentProductId);
-    if (!comp || String(comp.companyId) !== String(ctx.companyId)) {
+    if (!comp || comp.status !== 'ACTIVE' || String(comp.companyId) !== String(ctx.companyId)) {
       throw new ApiError(400, `Producto componente ${item.componentProductId} no encontrado`, 'INVALID_COMPONENT');
     }
   }
@@ -59,7 +59,7 @@ async function createProductionOrder(data, ctx) {
   if (bom.productId.toString() !== data.productId) throw new ApiError(400, 'La BOM no corresponde al producto', 'BOM_MISMATCH');
 
   const warehouse = await inventoryRepo.findWarehouseById(data.warehouseId);
-  if (!warehouse || String(warehouse.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Almacén no encontrado', 'WAREHOUSE_NOT_FOUND');
+  if (!warehouse || !warehouse.active || String(warehouse.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Almacén no encontrado', 'WAREHOUSE_NOT_FOUND');
 
   const folio = await repo.nextFolio(ctx.companyId, 'PROD');
 

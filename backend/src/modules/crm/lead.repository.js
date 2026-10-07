@@ -1,7 +1,7 @@
 const Lead = require('./lead.model');
 
 async function create(data) { return Lead.create(data); }
-async function findById(id) { return Lead.findById(id); }
+async function findById(id) { return Lead.findOne({ _id: id, deletedAt: null }); }
 async function list(companyId, { page = 1, limit = 20, status, assignedTo } = {}) {
   const filter = { companyId, deletedAt: null };
   if (status) filter.status = status;

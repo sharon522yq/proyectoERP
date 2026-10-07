@@ -45,6 +45,8 @@ async function update(id, data, ctx) {
 async function remove(id, ctx) {
   const prev = await repo.findById(id);
   if (!prev || String(prev.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Producto no encontrado', 'PRODUCT_NOT_FOUND');
+  const { hasReferences, productReferences } = require('../../utils/catalogDependencies');
+  if (await hasReferences(ctx.companyId, id, productReferences)) throw new ApiError(409, 'El producto tiene existencias, movimientos o documentos relacionados. Desactívalo para conservar su historial.', 'PRODUCT_IN_USE');
   await repo.remove(id);
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'DELETE', module: 'products', documentId: id, previousData: { sku: prev.sku, name: prev.name }, ip: ctx.ip });
   return { deleted: true };

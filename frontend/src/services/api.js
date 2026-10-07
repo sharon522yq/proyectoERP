@@ -148,7 +148,10 @@ export const productsApi = {
 
 export const inventoryApi = {
   getWarehouses: () => api.get('/inventory/warehouses').then((r) => r.data.data),
+  getWarehouse: (id) => api.get(`/inventory/warehouses/${id}`).then(r => r.data.data),
   createWarehouse: (data) => api.post('/inventory/warehouses', data).then((r) => r.data.data),
+  updateWarehouse: (id, data) => api.put(`/inventory/warehouses/${id}`, data).then(r => r.data.data),
+  deleteWarehouse: (id) => api.delete(`/inventory/warehouses/${id}`).then(r => r.data.data),
   getStock: (params) => api.get('/inventory/stock', { params }).then((r) => r.data.data),
   adjustStock: (data) => api.post('/inventory/stock/adjust', data).then((r) => r.data.data),
   getMovements: (params) => api.get('/inventory/movements', { params }).then((r) => r.data.data),

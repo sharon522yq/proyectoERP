@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Button, Modal } from 'react-native';
+import WarehouseDetail from './WarehouseDetail';
 import { inventoryApi, productsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { tokens } from '../../theme/tokens';
@@ -10,6 +11,7 @@ import EmptyState from '../../components/data-display/EmptyState';
 
 export default function InventoryScreen({ onBack }) {
   const { has } = useAuth();
+  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [warehouseForm, setWarehouseForm] = useState(false);
@@ -74,6 +76,7 @@ export default function InventoryScreen({ onBack }) {
     } finally { setSaving(false); }
   };
 
+  if (selectedWarehouse) return <WarehouseDetail warehouse={selectedWarehouse} products={products} onBack={() => setSelectedWarehouse(null)} onChanged={loadStock} onAdjust={id => { setSelectedWarehouse(null); setWarehouseId(id); setFormError(''); setModalVisible(true); }} />;
   return (
     <View style={styles.container}>
       <PageHeader
@@ -99,7 +102,9 @@ export default function InventoryScreen({ onBack }) {
           finally { setSaving(false); }
         }} />
       </View>}
-      <Text>Almacenes: {warehouses.map(w => w.name + ' (' + w.code + ')').join(', ') || 'Sin almacenes; crea uno antes de registrar existencias.'}</Text>
+      <Text>Almacenes</Text>
+      <ScrollView style={{ maxHeight: 170 }}>{warehouses.map(w => <Button key={w._id} title={'Gestionar: ' + w.name + ' (' + w.code + ')' + (w.active ? '' : ' · Desactivado')} onPress={() => setSelectedWarehouse(w)} />)}</ScrollView>
+      {!warehouses.length && <Text>Sin almacenes; crea uno antes de registrar existencias.</Text>}
       <View style={styles.toolbar}>
         {onBack ? <Button title="Volver" onPress={onBack} /> : null}
       </View>
@@ -109,14 +114,14 @@ export default function InventoryScreen({ onBack }) {
       ) : error ? (
         <ErrorState message={error} onRetry={loadStock} />
       ) : stockList.length === 0 ? (
-        <EmptyState title="Sin stock registrado" description="No hay existencias registradas en los almacenes." actionTitle="Realizar Ajuste" onAction={() => setModalVisible(true)} />
+        <EmptyState title="Sin stock registrado" description="No hay existencias registradas en los almacenes." actionTitle="Realizar Ajuste" onAction={has('inventory.adjust') ? () => setModalVisible(true) : undefined} />
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           {stockList.map((s, idx) => (
             <View key={s._id || idx} style={[styles.card, tokens.shadows.sm]}>
               <View>
-                <Text style={styles.productText}>Producto ID: {s.productId}</Text>
-                <Text style={styles.warehouseText}>Almacén ID: {s.warehouseId}</Text>
+                <Text style={styles.productText}>Producto: {products.find(p => p._id === s.productId)?.name || s.productId}</Text>
+                <Text style={styles.warehouseText}>Almacén: {warehouses.find(w => w._id === s.warehouseId)?.name || s.warehouseId}</Text>
               </View>
               <View style={styles.stockBadge}>
                 <Text style={styles.stockValue}>{s.quantity} u.</Text>
@@ -134,7 +139,7 @@ export default function InventoryScreen({ onBack }) {
             <ScrollView style={{ maxHeight: 120 }}>{products.map(p => <Button key={p._id} title={p.name} color={productId === p._id ? tokens.colors.primary : '#64748b'} disabled={saving} onPress={() => setProductId(p._id)} />)}</ScrollView>
             <TextInput accessibilityLabel="ID de Producto" style={styles.input} placeholder="ID de Producto" value={productId} onChangeText={setProductId} />
             <Text>Selecciona almacén</Text>
-            <ScrollView style={{ maxHeight: 120 }}>{warehouses.map(w => <Button key={w._id} title={w.name} color={warehouseId === w._id ? tokens.colors.primary : '#64748b'} disabled={saving} onPress={() => setWarehouseId(w._id)} />)}</ScrollView>
+            <ScrollView style={{ maxHeight: 120 }}>{warehouses.filter(w => w.active).map(w => <Button key={w._id} title={w.name} color={warehouseId === w._id ? tokens.colors.primary : '#64748b'} disabled={saving} onPress={() => setWarehouseId(w._id)} />)}</ScrollView>
             <TextInput accessibilityLabel="ID de Almacén" style={styles.input} placeholder="ID de Almacén" value={warehouseId} onChangeText={setWarehouseId} />
             <TextInput style={styles.input} placeholder="Cantidad (+/-)" value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
             <TextInput style={styles.input} placeholder="Motivo obligatorio del ajuste" value={reason} onChangeText={setReason} />

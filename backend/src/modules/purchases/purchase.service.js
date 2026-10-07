@@ -24,7 +24,7 @@ async function create(data, ctx) {
   }
   for (const item of data.items) {
     const product = await productRepo.findById(item.productId);
-    if (!product || String(product.companyId) !== String(ctx.companyId)) {
+    if (!product || product.status !== 'ACTIVE' || String(product.companyId) !== String(ctx.companyId)) {
       throw new ApiError(404, `Producto no encontrado: ${item.productId}`, 'PRODUCT_NOT_FOUND');
     }
   }
@@ -48,7 +48,7 @@ async function list(ctx, query) { return repo.list(ctx.companyId, query); }
 // Alta automática de stock al recibir la compra (agrupado por producto, en el
 // almacén por defecto de la empresa), con trazabilidad hacia la orden (D-010).
 async function receiveStock(order, ctx) {
-  const warehouses = await inventoryService.listWarehouses(ctx);
+  const warehouses = (await inventoryService.listWarehouses(ctx)).filter(w => w.active);
   if (!warehouses.length) {
     throw new ApiError(400, 'La empresa no tiene almacenes configurados; crea uno antes de recibir compras', 'WAREHOUSE_REQUIRED');
   }
