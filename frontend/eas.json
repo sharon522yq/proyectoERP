@@ -15,7 +15,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://proyectoerp-api.onrender.com/api/v1"
-      }
+      },
+      "autoIncrement": true
     },
     "production": {
       "autoIncrement": true

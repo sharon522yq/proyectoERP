@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { tokens } from '../theme/tokens';
@@ -7,7 +7,7 @@ import AppWordmark from '../components/branding/AppWordmark';
 
 export default function LoginScreen() {
   const { login, register } = useAuth();
-  const initialToken = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('resetToken') || '' : '';
+  const initialToken = Platform.OS === 'web' && typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search).get('resetToken') || '' : '';
   const [mode, setMode] = useState(initialToken ? 'reset' : 'login');
   const [name, setName] = useState('');
   const [token, setToken] = useState(initialToken);
@@ -45,7 +45,7 @@ export default function LoginScreen() {
       } else {
         await authApi.resetPassword(token.trim(), password);
         switchMode('login'); setToken('');
-        if (typeof window !== 'undefined') {
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location && window.history) {
           const url = new URL(window.location.href); url.searchParams.delete('resetToken');
           window.history.replaceState(null, '', url.toString());
         }
