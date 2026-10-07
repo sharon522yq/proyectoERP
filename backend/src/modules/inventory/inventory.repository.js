@@ -4,7 +4,7 @@ const Movement = require('./movement.model');
 
 // Warehouses
 async function createWarehouse(data) { return Warehouse.create(data); }
-async function findWarehouseById(id) { return Warehouse.findById(id); }
+async function findWarehouseById(id) { return Warehouse.findOne({ _id: id, deletedAt: null }); }
 async function listWarehouses(companyId) {
   return Warehouse.find({ companyId, deletedAt: null }).sort({ name: 1 }).lean();
 }

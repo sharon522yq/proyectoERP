@@ -14,6 +14,7 @@ test('CRM renders existing leads and an accessible conversion action', () => {
     useState: initial => [state++ === 0 ? [{ _id: 'lead1', name: 'Synthetic Lead', status: 'NEW' }] : state === 2 ? false : initial, () => {}]
   };
   const context = { exports: {}, require: name => {
+    if (name.includes('context/AuthContext')) return { useAuth: () => ({ has: () => true }) };
     if (name === 'react') return react;
     if (name === 'react-native') return native;
     if (name.includes('theme/tokens')) return { tokens: { colors: {}, typography: { sizes: {} }, spacing: {}, shadows: {}, borderRadius: {} } };

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Button, Modal } from 'react-native';
+import CatalogActions from '../../components/CatalogActions';
+import { useAuth } from '../../context/AuthContext';
 import { productsApi } from '../../services/api';
 import { tokens } from '../../theme/tokens';
 import PageHeader from '../../components/layout/PageHeader';
@@ -9,6 +11,7 @@ import EmptyState from '../../components/data-display/EmptyState';
 import StatusBadge from '../../components/data-display/StatusBadge';
 
 export default function ProductsScreen({ onBack }) {
+  const { has } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -99,6 +102,7 @@ export default function ProductsScreen({ onBack }) {
               <View style={styles.itemRight}>
                 <Text style={styles.itemPrice}>${p.price}</Text>
                 <StatusBadge status={p.status || 'ACTIVE'} />
+                <CatalogActions name={p.name} active={p.status === 'ACTIVE'} onDelete={has('products.delete') ? () => productsApi.deleteProduct(p._id) : undefined} onToggle={has('products.update') ? () => productsApi.updateProduct(p._id, { status: p.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }) : undefined} onChanged={loadProducts} explanation="El producto se retirará del catálogo si no tiene dependencias. Si tiene existencias o documentos relacionados, podrás desactivarlo." />
               </View>
             </View>
           ))}

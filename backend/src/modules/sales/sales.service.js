@@ -25,14 +25,14 @@ const ORDER_TRANSITIONS = {
 async function assertProductsInCompany(items, companyId) {
   for (const item of items) {
     const product = await productRepo.findById(item.productId);
-    if (!product || String(product.companyId) !== String(companyId)) {
+    if (!product || product.status !== 'ACTIVE' || String(product.companyId) !== String(companyId)) {
       throw new ApiError(404, `Producto no encontrado: ${item.productId}`, 'PRODUCT_NOT_FOUND');
     }
   }
 }
 
 async function resolveWarehouse(ctx) {
-  const warehouses = await inventoryService.listWarehouses(ctx);
+  const warehouses = (await inventoryService.listWarehouses(ctx)).filter(w => w.active);
   if (!warehouses.length) {
     throw new ApiError(400, 'La empresa no tiene almacenes configurados; crea uno antes de confirmar pedidos', 'WAREHOUSE_REQUIRED');
   }

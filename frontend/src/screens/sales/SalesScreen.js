@@ -35,7 +35,7 @@ export default function SalesScreen({ onBack }) {
       try {
         const [c, p] = await Promise.all([
           has('crm.customers.read') ? loadCatalog(crmApi.getCustomers) : [],
-          has('products.read') ? loadCatalog(productsApi.getProducts) : []
+          has('products.read') ? loadCatalog(params => productsApi.getProducts({ ...params, status: 'ACTIVE' })) : []
         ]);
         if (active) { setCustomers(c); setProducts(p); }
       } catch { if (active) setCatalogError('No se pudieron cargar los clientes o productos. Revisa tus permisos y vuelve a abrir Ventas.'); }

@@ -3,9 +3,15 @@ const productRepo = require('../products/product.repository');
 const { ApiError } = require('../../utils/ApiError');
 const { logAudit } = require('../../middlewares/audit');
 
+async function assertWarehouseCodeAvailable(code, ctx, exceptId) {
+  const filter = { companyId: ctx.companyId, code };
+  if (exceptId) filter._id = { $ne: exceptId };
+  if (await require('./warehouse.model').exists(filter)) throw new ApiError(409, 'El código del almacén ya existe en esta empresa', 'WAREHOUSE_CODE_TAKEN');
+}
 // ---- Warehouses ----
 async function createWarehouse(data, ctx) {
-  const warehouse = await repo.createWarehouse({ ...data, companyId: ctx.companyId });
+  await assertWarehouseCodeAvailable(data.code, ctx);
+  const warehouse = await repo.createWarehouse({ name: data.name, code: data.code, address: data.address, companyId: ctx.companyId });
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'CREATE', module: 'inventory.warehouses', documentId: String(warehouse._id), newData: { name: warehouse.name, code: warehouse.code }, ip: ctx.ip });
   return warehouse;
 }
@@ -18,6 +24,28 @@ async function getWarehouse(id, ctx) {
   return wh;
 }
 
+async function updateWarehouse(id, data, ctx) {
+  const prev = await getWarehouse(id, ctx);
+  if (data.active === false) {
+    const occupied = await require('./inventory.model').exists({ companyId: ctx.companyId, warehouseId: id, quantity: { $ne: 0 } });
+    const orders = await require('../production/productionOrder.model').exists({ companyId: ctx.companyId, warehouseId: id, status: { $nin: ['COMPLETED', 'CANCELLED'] } });
+    if (occupied || orders) throw new ApiError(409, 'El almacén tiene existencias u órdenes de producción pendientes; no puede desactivarse.', 'WAREHOUSE_IN_USE');
+  }
+  if (data.code) await assertWarehouseCodeAvailable(data.code, ctx, id);
+  const safe = {};
+  for (const field of ['name','code','address','active']) if (data[field] !== undefined) safe[field] = data[field];
+  const updated = await repo.updateWarehouse(id, safe);
+  await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'UPDATE', module: 'inventory.warehouses', documentId: id, previousData: prev.toObject(), newData: safe, ip: ctx.ip });
+  return updated;
+}
+async function deleteWarehouse(id, ctx) {
+  const prev = await getWarehouse(id, ctx);
+  const { hasReferences, warehouseReferences } = require('../../utils/catalogDependencies');
+  if (await hasReferences(ctx.companyId, id, warehouseReferences)) throw new ApiError(409, 'El almacén tiene existencias, movimientos o documentos relacionados. Conserva el historial y desactívalo cuando esté vacío.', 'WAREHOUSE_IN_USE');
+  await repo.updateWarehouse(id, { deletedAt: new Date(), active: false });
+  await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'DELETE', module: 'inventory.warehouses', documentId: id, previousData: { name: prev.name, code: prev.code }, ip: ctx.ip });
+  return { deleted: true };
+}
 // ---- Stock ----
 async function getStock(ctx, query) { return repo.listStock(ctx.companyId, query); }
 
@@ -27,6 +55,7 @@ async function adjustStock(productId, warehouseId, quantity, type, reason, ctx, 
   const wh = await repo.findWarehouseById(warehouseId);
   if (!wh || String(wh.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Almacén no encontrado', 'WAREHOUSE_NOT_FOUND');
 
+  if (!wh.active) throw new ApiError(409, 'El almacén está desactivado', 'WAREHOUSE_INACTIVE');
   const current = await repo.findStock(ctx.companyId, warehouseId, productId);
   const prevStock = current ? current.quantity : 0;
   const delta = type === 'SALE_EXIT' || type === 'TRANSFER' ? -Math.abs(quantity) : Math.abs(quantity);
@@ -66,4 +95,4 @@ async function kardex(productId, warehouseId, ctx) {
   return repo.listMovements(ctx.companyId, { productId, warehouseId, limit: 1000 });
 }
 
-module.exports = { createWarehouse, listWarehouses, getWarehouse, getStock, adjustStock, assertStockAvailable, listMovements, kardex };
+module.exports = { updateWarehouse, deleteWarehouse, createWarehouse, listWarehouses, getWarehouse, getStock, adjustStock, assertStockAvailable, listMovements, kardex };

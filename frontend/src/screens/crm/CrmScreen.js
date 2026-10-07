@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, ScrollView, StyleSheet, Button, Modal } from 'react-native';
+import CatalogActions from '../../components/CatalogActions';
+import { useAuth } from '../../context/AuthContext';
 import { crmApi } from '../../services/api';
 import { tokens } from '../../theme/tokens';
 import PageHeader from '../../components/layout/PageHeader';
@@ -9,6 +11,7 @@ import EmptyState from '../../components/data-display/EmptyState';
 import StatusBadge from '../../components/data-display/StatusBadge';
 
 export default function CrmScreen({ onBack }) {
+  const { has } = useAuth();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -106,8 +109,9 @@ export default function CrmScreen({ onBack }) {
                 <Text style={styles.email}>{l.email} {l.phone ? `• ${l.phone}` : ''}</Text>
               </View>
               <View style={styles.right}>
+                {has('crm.leads.delete') && <CatalogActions name={l.name} onDelete={() => crmApi.deleteLead(l._id)} onChanged={loadLeads} explanation="El lead se retirará del listado. Si fue convertido, su cliente y documentos se conservan." />}
                 <StatusBadge status={l.customerId ? 'CONVERTED' : l.status || 'NEW'} />
-                {!l.customerId && !l.convertedAt ? (
+                {has('crm.leads.update') && !l.customerId && !l.convertedAt ? (
                   <Button title="Convertir a Cliente" disabled={saving} onPress={() => handleConvert(l._id)} />
                 ) : null}
               </View>
