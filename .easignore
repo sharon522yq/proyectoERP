@@ -1,0 +1,27 @@
+node_modules/
+.env
+.env.local
+coverage/
+.nyc_output/
+dist/
+build/
+.expo/
+.web/
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Generate native projects on EAS using the installed Expo SDK.
+**/android/**
+**/ios/**
+**/node_modules/**
+**/.env
+**/.env.*
+**/.local/**
+**/*.keystore
+**/*.jks
+
+/frontend/android
+/frontend/ios
