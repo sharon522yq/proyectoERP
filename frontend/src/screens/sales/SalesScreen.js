@@ -1,13 +1,15 @@
+import { operationError } from '../../services/operationError';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, ScrollView, StyleSheet, Button, Platform, Share } from 'react-native';
-import { salesApi, crmApi, productsApi } from '../../services/api';
+import { salesApi, crmApi, productsApi, inventoryApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { tokens } from '../../theme/tokens';
+import SearchSelect from '../../components/SearchSelect';
 import PageHeader from '../../components/layout/PageHeader';
 import { invoiceHtml, invoiceText, money } from './invoiceDocument';
 
 const rows = data => data?.items || (Array.isArray(data) ? data : []);
-const labels = { DRAFT: 'Borrador', SENT: 'Enviada', APPROVED: 'Aprobada', CONVERTED: 'Convertida', CONFIRMED: 'Confirmado', PREPARING: 'En preparación', SHIPPED: 'Enviado', DELIVERED: 'Entregado', CANCELLED: 'Cancelado' };
+const labels = { DRAFT: 'Borrador', SENT: 'Enviada', APPROVED: 'Aprobada', CONVERTED: 'Convertida', CONFIRMED: 'Confirmado', PREPARING: 'En preparación', SHIPPED: 'Enviado', DELIVERED: 'Entregado', CANCELLED: 'Cancelado', PAID: 'Pagada', PARTIAL: 'Pago parcial', OVERDUE: 'Vencida' };
 const blankLine = () => ({ productId: '', quantity: '1', unitPrice: '', taxRate: '0' });
 
 export default function SalesScreen({ onBack }) {
@@ -25,6 +27,11 @@ export default function SalesScreen({ onBack }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [selected, setSelected] = useState(null);
+  const [warehouses, setWarehouses] = useState([]), [warehouseId, setWarehouseId] = useState('');
+  const [payment, setPayment] = useState(null);
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('CASH');
+  const [reference, setReference] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [catalogError, setCatalogError] = useState('');
@@ -33,11 +40,12 @@ export default function SalesScreen({ onBack }) {
     let active = true;
     (async () => {
       try {
-        const [c, p] = await Promise.all([
+        const [c, p, w] = await Promise.all([
           has('crm.customers.read') ? loadCatalog(crmApi.getCustomers) : [],
-          has('products.read') ? loadCatalog(params => productsApi.getProducts({ ...params, status: 'ACTIVE' })) : []
+          has('products.read') ? loadCatalog(params => productsApi.getProducts({ ...params, status: 'ACTIVE' })) : [],
+          has('inventory.read') ? inventoryApi.getWarehouses() : []
         ]);
-        if (active) { setCustomers(c); setProducts(p); }
+        if (active) { setCustomers(c); setProducts(p); const activeWarehouses = rows(w).filter(item => item.active); setWarehouses(activeWarehouses); if (activeWarehouses.length === 1) setWarehouseId(activeWarehouses[0]._id); }
       } catch { if (active) setCatalogError('No se pudieron cargar los clientes o productos. Revisa tus permisos y vuelve a abrir Ventas.'); }
     })();
     return () => { active = false; };
@@ -73,7 +81,7 @@ export default function SalesScreen({ onBack }) {
       if (nextTab !== tab || page !== 1) { setTab(nextTab); setPage(1); }
       else await load(nextTab, 1);
       return result;
-    } catch (err) { setError(err.response?.data?.message || err.message || 'No se pudo completar la operación'); }
+    } catch (err) { setError(operationError(err)); }
     finally { pending.current = false; setBusy(false); }
   }
   const patch = (index, values) => setLines(previous => previous.map((line, i) => i === index ? { ...line, ...values } : line));
@@ -124,13 +132,13 @@ export default function SalesScreen({ onBack }) {
       {tab === 'quotes' && has('sales.quotes.create') && <Button title={creating ? 'Cerrar formulario' : 'Nueva cotización'} disabled={busy} onPress={() => setCreating(!creating)} />}
       {creating && tab === 'quotes' && <View style={styles.card}>
         <Text style={styles.title}>Nueva cotización</Text>
-        <Text>Cliente</Text>
+
         {!customers.length && <Text>Primero registra un cliente en CRM y vuelve a abrir Ventas.</Text>}
-        <View style={styles.row}>{customers.map(c => <Button key={c._id} title={c.name} color={customerId === c._id ? tokens.colors.primary : '#64748b'} disabled={busy} onPress={() => setCustomerId(c._id)} />)}</View>
+        <SearchSelect label="Cliente" placeholder="Seleccionar cliente" items={customers} value={customerId} disabled={busy} onChange={setCustomerId} />
         {!products.length && <Text>Primero registra productos y existencias en Productos e Inventario.</Text>}
         {lines.map((line, index) => <View key={index} style={styles.card}>
           <Text style={styles.title}>Partida {index + 1}</Text>
-          <View style={styles.row}>{products.map(p => <Button key={p._id} title={p.name + ' (' + money(p.price) + ')'} color={line.productId === p._id ? tokens.colors.primary : '#64748b'} disabled={busy} onPress={() => patch(index, { productId: p._id, unitPrice: String(p.price ?? 0) })} />)}</View>
+          <SearchSelect label={'Producto de partida ' + (index + 1)} placeholder={'Seleccionar producto de partida ' + (index + 1)} items={products} value={line.productId} disabled={busy} describe={p => p.name + ' (' + money(p.price) + ')'} onChange={id => patch(index, { productId: id, unitPrice: String(products.find(p => p._id === id)?.price ?? 0) })} />
           {[['quantity', 'Cantidad'], ['unitPrice', 'Precio unitario'], ['taxRate', 'Impuesto (%)']].map(([key, label]) => <View key={key}>
             <Text>{label}</Text><TextInput accessibilityLabel={label + ' partida ' + (index + 1)} style={styles.input} value={line[key]} keyboardType="numeric" editable={!busy} onChangeText={value => patch(index, { [key]: value })} />
           </View>)}
@@ -150,19 +158,44 @@ export default function SalesScreen({ onBack }) {
           {tab === 'quotes' && ['DRAFT', 'SENT'].includes(doc.status) && has('sales.quotes.approve') && <Button title="Aprobar cotización" disabled={busy} onPress={() => action(() => salesApi.approveQuote(doc._id), 'Cotización aprobada')} />}
           {tab === 'quotes' && doc.status === 'APPROVED' && has('sales.orders.create') && <Button title="Convertir a pedido" disabled={busy} onPress={() => action(() => salesApi.createOrderFromQuote(doc._id), 'Pedido creado en borrador', 'orders')} />}
           {tab === 'orders' && doc.status === 'DRAFT' && has('sales.orders.update') && <Button title="Confirmar pedido y descontar stock" disabled={busy} onPress={() => setSelected(doc)} />}
+          {tab === 'orders' && has('sales.orders.update') && ['CONFIRMED', 'PREPARING', 'SHIPPED'].includes(doc.status) && <Button title={doc.status === 'CONFIRMED' ? 'Marcar en preparación' : doc.status === 'PREPARING' ? 'Marcar enviado' : 'Marcar entregado'} disabled={busy} onPress={() => action(() => salesApi.updateOrderStatus(doc._id, doc.status === 'CONFIRMED' ? 'PREPARING' : doc.status === 'PREPARING' ? 'SHIPPED' : 'DELIVERED'), 'Estado de entrega actualizado')} />}
           {tab === 'orders' && ['CONFIRMED', 'PREPARING', 'SHIPPED', 'DELIVERED'].includes(doc.status) && has('sales.invoices.create') && <Button title="Generar factura interna" disabled={busy} onPress={() => action(() => salesApi.createInvoiceFromOrder(doc._id), 'Factura interna generada', 'invoices')} />}
+          {tab === 'invoices' && !['PAID', 'CANCELLED'].includes(doc.status) && has('sales.payments.create') && <Button title="Registrar cobro" disabled={busy} onPress={() => {
+            setPayment({ invoice: doc, requestId: Date.now().toString(36) + Math.random().toString(36).slice(2) });
+            setAmount(String(Math.round((doc.total - (doc.paidAmount || 0)) * 100) / 100)); setMethod('CASH'); setReference(''); setError('');
+          }} />}
           {tab === 'invoices' && <Button title={Platform.OS === 'web' ? 'Imprimir / Guardar PDF' : 'Compartir factura'} onPress={() => exportInvoice(doc)} />}
         </View>
         {tab === 'invoices' && <>
           <Text>Subtotal neto: {money(doc.subtotal, doc.currency)} · Descuento incluido: {money(doc.discountTotal, doc.currency)}</Text>
           <Text>Impuestos: {money(doc.taxTotal, doc.currency)}</Text>
+          <Text>Pagado: {money(doc.paidAmount || 0, doc.currency)} · Pendiente: {money(doc.total - (doc.paidAmount || 0), doc.currency)}</Text>
           <Text>Documento interno del ERP. No es un comprobante fiscal.</Text>
         </>}
       </View>)}
+      {payment && tab === 'invoices' && <View style={styles.card}>
+        <Text style={styles.title}>Registrar cobro · {payment.invoice.folio}</Text>
+        <Text>Registra únicamente dinero que ya recibiste. Este cobro actualizará el saldo de la factura y la caja.</Text>
+        <Text>Importe recibido</Text>
+        <TextInput accessibilityLabel="Importe recibido" style={styles.input} value={amount} keyboardType="decimal-pad" editable={!busy} onChangeText={setAmount} />
+        <Text>Forma de pago</Text>
+        <View style={styles.row}>{[['CASH', 'Efectivo'], ['TRANSFER', 'Transferencia'], ['CARD', 'Tarjeta'], ['CHECK', 'Cheque'], ['OTHER', 'Otro']].map(([key, label]) => <Button key={key} title={label} disabled={busy} color={method === key ? tokens.colors.primary : '#64748b'} onPress={() => setMethod(key)} />)}</View>
+        <Text>Referencia (opcional)</Text>
+        <TextInput accessibilityLabel="Referencia del cobro" style={styles.input} value={reference} maxLength={100} editable={!busy} onChangeText={setReference} />
+        <Button title="Confirmar dinero recibido" disabled={busy} onPress={async () => {
+          const value = Number(amount);
+          if (!amount.trim() || !Number.isFinite(value) || value <= 0 || Math.abs(value * 100 - Math.round(value * 100)) >= 1e-8 || value > Math.round((payment.invoice.total - (payment.invoice.paidAmount || 0)) * 100) / 100) { setError('Escribe un importe mayor que cero, con máximo dos decimales y que no exceda el saldo pendiente.'); return; }
+          const result = await action(() => salesApi.createPayment(payment.invoice._id, { amount: value, method, reference, requestId: payment.requestId }), 'Cobro registrado y saldo actualizado');
+          if (result) setPayment(null);
+        }} />
+        <Button title="Cancelar sin registrar" disabled={busy} onPress={() => setPayment(null)} />
+      </View>}
       {selected && tab === 'orders' && <View style={styles.card}>
-        <Text>Confirmar {selected.folio} descontará existencias del almacén configurado. Comprueba las partidas antes de continuar.</Text>
+        <Text>Confirmar {selected.folio} descontará existencias del almacén elegido. Comprueba las partidas antes de continuar.</Text>
+        <SearchSelect label="Almacén de salida" placeholder="Seleccionar almacén de salida" items={warehouses} value={warehouseId} disabled={busy} onChange={setWarehouseId} />
         <Button title="Confirmar salida de existencias" disabled={busy} onPress={async () => {
-          const result = await action(() => salesApi.updateOrderStatus(selected._id, 'CONFIRMED'), 'Pedido confirmado y stock actualizado');
+          if (!warehouseId) { setError('Selecciona el almacén de salida. Si no existe, créalo en Inventario.'); return; }
+          const result = await action(() => salesApi.updateOrderStatus(selected._id, 'CONFIRMED', warehouseId), 'Pedido confirmado y stock actualizado');
           if (result) setSelected(null);
         }} />
         <Button title="Volver sin confirmar" disabled={busy} onPress={() => setSelected(null)} />

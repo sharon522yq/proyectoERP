@@ -28,20 +28,27 @@ export default function CrmScreen({ onBack }) {
   const emailInput = useRef(null);
   const phoneInput = useRef(null);
 
-  useEffect(() => {
-    loadLeads();
-  }, []);
+  const [tab, setTab] = useState('leads'), [editing, setEditing] = useState(null), [page, setPage] = useState(1), [total, setTotal] = useState(0), [search, setSearch] = useState('');
+  const requestVersion = useRef(0);
+  function openForm(record = null) {
+    setEditing(record); setName(record?.name || ''); setEmail(record?.email || ''); setPhone(record?.phone || ''); setFormError(''); setModalVisible(true);
+  }
+  useEffect(() => { loadLeads(); }, [tab, page, search]);
 
   const loadLeads = async () => {
+    const version = ++requestVersion.current;
     try {
       setLoading(true);
       setError(null);
-      const data = await crmApi.getLeads();
+      const params = { page, limit: 20, search: search.trim() };
+      const data = await (tab === 'leads' ? crmApi.getLeads(params) : crmApi.getCustomers(params));
+      if (version !== requestVersion.current) return;
+      setTotal(data.total || 0);
       setLeads(data.items || data || []);
     } catch (err) {
-      setError(err.message || 'Error al cargar leads');
+      if (version === requestVersion.current) setError(err.response?.data?.message || 'No se pudo cargar el catálogo. Intenta nuevamente.');
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   };
 
@@ -56,7 +63,9 @@ export default function CrmScreen({ onBack }) {
     if (leadPhone.length > 30) { setFormError('El teléfono admite hasta 30 caracteres'); return; }
     try {
       submitting.current = true; setSaving(true); setFormError('');
-      await crmApi.createLead({ name: leadName, ...(leadEmail ? { email: leadEmail } : {}), ...(leadPhone ? { phone: leadPhone } : {}) });
+      const data = { name: leadName, ...(leadEmail ? { email: leadEmail } : editing ? { email: '' } : {}), ...(leadPhone ? { phone: leadPhone } : editing ? { phone: '' } : {}) };
+      if (editing) await (tab === 'leads' ? crmApi.updateLead(editing._id, data) : crmApi.updateCustomer(editing._id, data));
+      else await (tab === 'leads' ? crmApi.createLead(data) : crmApi.createCustomer(data));
       setModalVisible(false);
       setName('');
       setEmail('');
@@ -84,13 +93,16 @@ export default function CrmScreen({ onBack }) {
   return (
     <View style={styles.container}>
       <PageHeader
-        title="CRM — Leads y Clientes"
+        title="CRM: prospectos, clientes y proveedores"
         subtitle="Gestión comercial y conversión de oportunidades"
-        actionTitle="Nuevo Lead"
-        onAction={() => setModalVisible(true)}
+        actionTitle={has(tab === 'leads' ? 'crm.leads.create' : 'crm.customers.create') ? tab === 'leads' ? 'Nuevo Lead' : 'Nuevo cliente / proveedor' : undefined}
+        onAction={() => openForm()}
       />
 
       <View style={styles.toolbar}>
+        {has('crm.leads.read') && <Button title="Prospectos" disabled={saving} onPress={() => { setTab('leads'); setPage(1); }} />}
+        {has('crm.customers.read') && <Button title="Clientes y proveedores" disabled={saving} onPress={() => { setTab('customers'); setPage(1); }} />}
+        <TextInput style={styles.search} accessibilityLabel="Buscar en CRM" placeholder="Buscar por nombre…" value={search} onChangeText={value => { setSearch(value); setPage(1); }} />
         {onBack ? <Button title="Volver" onPress={onBack} /> : null}
       </View>
 
@@ -99,7 +111,7 @@ export default function CrmScreen({ onBack }) {
       ) : error ? (
         <ErrorState message={error} onRetry={loadLeads} />
       ) : leads.length === 0 ? (
-        <EmptyState title="No hay leads" description="Crea tu primer lead comercial." actionTitle="Crear Lead" onAction={() => setModalVisible(true)} />
+        <EmptyState title={tab === 'leads' ? 'No hay prospectos' : 'No hay clientes o proveedores'} description="Agrega un registro para empezar." actionTitle={has(tab === 'leads' ? 'crm.leads.create' : 'crm.customers.create') ? 'Crear registro' : undefined} onAction={() => openForm()} />
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           {leads.map((l) => (
@@ -109,9 +121,10 @@ export default function CrmScreen({ onBack }) {
                 <Text style={styles.email}>{l.email} {l.phone ? `• ${l.phone}` : ''}</Text>
               </View>
               <View style={styles.right}>
-                {has('crm.leads.delete') && <CatalogActions name={l.name} onDelete={() => crmApi.deleteLead(l._id)} onChanged={loadLeads} explanation="El lead se retirará del listado. Si fue convertido, su cliente y documentos se conservan." />}
+                {tab === 'leads' && has('crm.leads.delete') && <CatalogActions name={l.name} onDelete={() => crmApi.deleteLead(l._id)} onChanged={loadLeads} explanation="El lead se retirará del listado. Si fue convertido, su cliente y documentos se conservan." />}
+                {has(tab === 'leads' ? 'crm.leads.update' : 'crm.customers.update') && <Button title={'Editar ' + l.name} disabled={saving} onPress={() => openForm(l)} />}
                 <StatusBadge status={l.customerId ? 'CONVERTED' : l.status || 'NEW'} />
-                {has('crm.leads.update') && !l.customerId && !l.convertedAt ? (
+                {tab === 'leads' && has('crm.leads.update') && !l.customerId && !l.convertedAt ? (
                   <Button title="Convertir a Cliente" disabled={saving} onPress={() => handleConvert(l._id)} />
                 ) : null}
               </View>
@@ -120,17 +133,18 @@ export default function CrmScreen({ onBack }) {
         </ScrollView>
       )}
 
+      <View style={styles.toolbar}><Button title="Anterior" disabled={loading || page === 1} onPress={() => setPage(page - 1)} /><Text>Página {page}</Text><Button title="Siguiente" disabled={loading || page * 20 >= total} onPress={() => setPage(page + 1)} /></View>
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, tokens.shadows.lg]}>
-            <Text style={styles.modalTitle}>Crear Nuevo Lead</Text>
-            <TextInput style={styles.input} ref={nameInput} accessibilityLabel="Nombre del lead" maxLength={150} editable={!saving} placeholder="Nombre completo" value={name} onChangeText={setName} />
-            <TextInput style={styles.input} ref={emailInput} accessibilityLabel="Correo del lead" keyboardType="email-address" autoComplete="email" editable={!saving} placeholder="Correo electrónico (opcional)" value={email} onChangeText={setEmail} autoCapitalize="none" />
-            <TextInput style={styles.input} ref={phoneInput} accessibilityLabel="Teléfono del lead" maxLength={30} editable={!saving} placeholder="Teléfono (opcional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <Text style={styles.modalTitle}>{editing ? 'Editar registro' : tab === 'leads' ? 'Crear Nuevo Lead' : 'Nuevo cliente / proveedor'}</Text>
+            <TextInput style={styles.input} ref={nameInput} accessibilityLabel={tab === 'leads' ? 'Nombre del lead' : 'Nombre del cliente o proveedor'} maxLength={150} editable={!saving} placeholder="Nombre completo" value={name} onChangeText={setName} />
+            <TextInput style={styles.input} ref={emailInput} accessibilityLabel={tab === 'leads' ? 'Correo del lead' : 'Correo del cliente o proveedor'} keyboardType="email-address" autoComplete="email" editable={!saving} placeholder="Correo electrónico (opcional)" value={email} onChangeText={setEmail} autoCapitalize="none" />
+            <TextInput style={styles.input} ref={phoneInput} accessibilityLabel={tab === 'leads' ? 'Teléfono del lead' : 'Teléfono del cliente o proveedor'} maxLength={30} editable={!saving} placeholder="Teléfono (opcional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             {!!formError && <Text style={styles.error}>{formError}</Text>}
             <View style={styles.modalActions}>
               <Button title="Cancelar" disabled={saving} color="#64748b" onPress={() => setModalVisible(false)} />
-              <Button title="Guardar Lead" disabled={saving} onPress={handleCreateLead} />
+              <Button title={editing ? 'Guardar cambios' : tab === 'leads' ? 'Guardar Lead' : 'Guardar cliente / proveedor'} disabled={saving} onPress={handleCreateLead} />
             </View>
           </View>
         </View>
@@ -141,12 +155,13 @@ export default function CrmScreen({ onBack }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: tokens.spacing.md },
-  toolbar: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: tokens.spacing.md },
+  toolbar: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing.sm, justifyContent: 'flex-end', marginBottom: tokens.spacing.md },
+  search: { minWidth: 180, flex: 1, borderWidth: 1, borderColor: tokens.colors.border, borderRadius: 8, padding: 10 },
   list: { gap: tokens.spacing.sm, paddingBottom: tokens.spacing.xl },
-  card: { backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: tokens.colors.border },
+  card: { backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.md, flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing.md, justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: tokens.colors.border },
   name: { fontSize: tokens.typography.sizes.md, fontWeight: '600', color: tokens.colors.text },
   email: { fontSize: tokens.typography.sizes.xs, color: tokens.colors.textSecondary, marginTop: 2 },
-  right: { alignItems: 'flex-end', gap: 6 },
+  right: { alignItems: 'flex-end', maxWidth: '100%', flexShrink: 1, gap: 6 },
   convertBtn: { backgroundColor: tokens.colors.primaryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: tokens.borderRadius.sm },
   convertText: { fontSize: tokens.typography.sizes.xs, color: tokens.colors.primary, fontWeight: '600' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: tokens.spacing.md },

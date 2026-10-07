@@ -15,10 +15,12 @@ const getDashboard = asyncHandler(async (req, res) => {
     ['crm', 'crm.leads.read', () => svc.getCRMSummary(c.companyId)],
     ['hr', 'hr.employees.read', () => svc.getHRSummary(c.companyId)]
   ];
-  const data = {};
+  const enabledModules = c.companyId ? await require('../../middlewares/modules').enabledModules(c.companyId) : [];
+  const optional = require('../../middlewares/modules').OPTIONAL_MODULES;
+  const data = c.companyId ? { enabledModules } : {};
   if (c.companyId) {
     for (const [name, permission, load] of specs) {
-      if (hasPermission(req.user.permissions, permission)) data[name] = await load();
+      if ((!optional.includes(name) || enabledModules.includes(name)) && hasPermission(req.user.permissions, permission)) data[name] = await load();
     }
   }
   res.json({ success: true, data });

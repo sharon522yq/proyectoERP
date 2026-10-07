@@ -18,6 +18,7 @@ export const MENU_BY_PERMISSION = [
   { label: 'Proyectos', route: 'projects', permission: 'projects.read', icon: 'briefcase' },
   { label: 'Producción', route: 'production', permission: 'production.orders.read', icon: 'cpu' },
   { label: 'Usuarios y Roles', route: 'admin', permission: 'users.read', icon: 'shield' },
+  { label: 'Configuración', route: 'settings', permission: 'settings.read', icon: 'settings' },
   { label: 'Auditoría', route: 'audit', permission: 'audit.read', icon: 'file-text' },
   { label: 'Asistente IA', route: 'ai', permission: 'ai.chat', icon: 'cpu' }
 ];

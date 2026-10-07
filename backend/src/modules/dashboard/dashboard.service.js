@@ -1,3 +1,4 @@
+const money = require('../../utils/money');
 const mongoose = require('mongoose');
 
 // Aggregation helpers for dashboard/reports
@@ -104,7 +105,7 @@ async function getFinanceSummary(companyId) {
   const income = accounts.filter(a => a.type === 'INCOME').reduce((s, a) => s + a.balance, 0);
   const expenses = accounts.filter(a => a.type === 'EXPENSE').reduce((s, a) => s + a.balance, 0);
 
-  return { assets, liabilities, income, expenses, netIncome: income - expenses };
+  return { assets: money(assets), liabilities: money(liabilities), income: money(income), expenses: money(expenses), netIncome: money(income - expenses) };
 }
 
 async function getProductionSummary(companyId) {

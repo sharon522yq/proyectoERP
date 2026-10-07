@@ -114,7 +114,7 @@ describe('Sales - Full Flow', () => {
   });
 
   test('confirmar pedido', async () => {
-    const res = await request(app).put(`/api/v1/sales/orders/${orderId}/status`).set('Authorization', `Bearer ${token}`).send({ status: 'CONFIRMED' });
+    const res = await request(app).put(`/api/v1/sales/orders/${orderId}/status`).set('Authorization', `Bearer ${token}`).send({ status: 'CONFIRMED', warehouseId });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('CONFIRMED');
   });

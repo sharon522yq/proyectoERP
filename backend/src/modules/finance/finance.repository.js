@@ -14,6 +14,9 @@ async function updateAccount(id, data) {
   return Account.findById(id);
 }
 
+async function incrementBalance(id, delta) {
+  return Account.findByIdAndUpdate(id, [{ $set: { balance: { $round: [{ $add: [{ $ifNull: ['$balance', 0] }, delta] }, 2] } } }], { new: true });
+}
 async function createTransaction(data) { return Transaction.create(data); }
 async function listTransactions(companyId, { page = 1, limit = 20, accountId, type, startDate, endDate } = {}) {
   const filter = { companyId };
@@ -32,4 +35,4 @@ async function listTransactions(companyId, { page = 1, limit = 20, accountId, ty
   return { items, total, page, limit };
 }
 
-module.exports = { createAccount, findAccountById, findAccountByCode, listAccounts, updateAccount, createTransaction, listTransactions };
+module.exports = { createAccount, findAccountById, findAccountByCode, listAccounts, updateAccount, incrementBalance, createTransaction, listTransactions };

@@ -1,3 +1,4 @@
+const atomic = require('../../utils/atomic');
 const repo = require('./inventory.repository');
 const productRepo = require('../products/product.repository');
 const { ApiError } = require('../../utils/ApiError');
@@ -56,14 +57,10 @@ async function adjustStock(productId, warehouseId, quantity, type, reason, ctx, 
   if (!wh || String(wh.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Almacén no encontrado', 'WAREHOUSE_NOT_FOUND');
 
   if (!wh.active) throw new ApiError(409, 'El almacén está desactivado', 'WAREHOUSE_INACTIVE');
-  const current = await repo.findStock(ctx.companyId, warehouseId, productId);
-  const prevStock = current ? current.quantity : 0;
-  const delta = type === 'SALE_EXIT' || type === 'TRANSFER' ? -Math.abs(quantity) : Math.abs(quantity);
-  const newStock = prevStock + delta;
-
-  if (newStock < 0) throw new ApiError(400, 'Stock insuficiente', 'INSUFFICIENT_STOCK');
-
+  const delta = ['SALE_EXIT', 'TRANSFER'].includes(type) ? -Math.abs(quantity) : Math.abs(quantity);
   const updated = await repo.upsertStock(ctx.companyId, warehouseId, productId, delta);
+  const newStock = updated.quantity;
+  const prevStock = newStock - delta;
   await repo.createMovement({
     companyId: ctx.companyId, warehouseId, productId, type,
     quantity: Math.abs(quantity), previousStock: prevStock, newStock,
@@ -95,4 +92,4 @@ async function kardex(productId, warehouseId, ctx) {
   return repo.listMovements(ctx.companyId, { productId, warehouseId, limit: 1000 });
 }
 
-module.exports = { updateWarehouse, deleteWarehouse, createWarehouse, listWarehouses, getWarehouse, getStock, adjustStock, assertStockAvailable, listMovements, kardex };
+module.exports = { updateWarehouse, deleteWarehouse, createWarehouse, listWarehouses, getWarehouse, getStock, adjustStock: atomic(adjustStock), assertStockAvailable, listMovements, kardex };

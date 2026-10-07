@@ -39,3 +39,17 @@ test('actualización no puede mover un proyecto a otra empresa', async () => {
   const changed = await authorized('put', `/api/v1/projects/${created.body.data._id}`).send({ name: 'Editado', companyId: b._id });
   expect(changed.status).toBe(200); expect(changed.body.data.companyId).toBe(String(a._id));
 });
+
+test('optional module configuration is tenant scoped, enforced in API and does not grant permissions', async () => {
+  expect((await authorized('put', '/api/v1/settings').send({ key: 'modulePreferences', value: { enabledModules: ['users'] } })).status).toBe(400);
+  const foreign = (await request(app).post('/api/v1/auth/register').send({ name: 'Foreign Admin', email: 'b@example.com', password: 'Password123', role: 'ADMIN', companyId: b._id })).body.data;
+  expect((await authorized('put', '/api/v1/settings').send({ key: 'modulePreferences', value: { enabledModules: [] } })).status).toBe(200);
+  expect((await authorized('get', '/api/v1/production/orders', production)).body.code).toBe('MODULE_DISABLED');
+  expect((await authorized('get', '/api/v1/production/orders', foreign)).status).toBe(200);
+  const summary = await authorized('get', '/api/v1/dashboard');
+  expect(summary.body.data.enabledModules).toEqual([]); expect(summary.body.data.production).toBeUndefined();
+  expect((await authorized('put', '/api/v1/settings', sales).send({ key: 'modulePreferences', value: { enabledModules: ['production'] } })).status).toBe(403);
+  await authorized('put', '/api/v1/settings').send({ key: 'modulePreferences', value: { enabledModules: ['production'] } });
+  expect((await authorized('get', '/api/v1/production/orders', production)).status).toBe(200);
+  expect((await authorized('get', '/api/v1/production/orders', sales)).status).toBe(403);
+});

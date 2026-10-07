@@ -56,7 +56,13 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
       for (let i = 0; i < 60; i++) { if (await evaluate(expression).catch(() => false)) { steps.push(label); console.log(JSON.stringify({ passed: label })); return; } await pause(500); }
       throw new Error('UI_TIMEOUT_' + label);
     };
-    const click = text => evaluate(`(() => { const button = [...document.querySelectorAll('[role=button],button')].find(e=>e.textContent === ${JSON.stringify(text)} || e.getAttribute('aria-label') === ${JSON.stringify(text)}); if (!button) throw new Error('BUTTON_MISSING'); button.click(); })()`);
+    const click = async text => {
+      for(let i=0;i<60;i++) {
+        const clicked = await evaluate(`(() => { const button=[...document.querySelectorAll('[role=button],button')].find(e => (e.textContent===${JSON.stringify(text)} || e.getAttribute('aria-label')===${JSON.stringify(text)}) && e.getClientRects().length && e.getAttribute('aria-disabled')!=='true' && !e.disabled); if(!button)return false;button.click();return true;})()`);
+        if(clicked)return; await pause(200);
+      }
+      throw new Error('BUTTON_NOT_READY');
+    };
     const fill = values => evaluate(`(() => { const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; const inputs=[...document.querySelectorAll('input')]; const values=${JSON.stringify(values)}; for(let i=0;i<values.length;i++){setter.call(inputs[i],values[i]);inputs[i].dispatchEvent(new Event('input',{bubbles:true}));} })()`);
     await send('Runtime.enable');
     ws.addEventListener('message', event => { const m=JSON.parse(event.data); if(m.method==='Runtime.exceptionThrown') console.log('JS_ERROR', m.params.exceptionDetails.exception?.description?.split('\n')[0]); });
@@ -79,8 +85,8 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
     await click('Volver'); await wait("document.body.textContent.includes('Bienvenido, Synthetic Owner')", 'back_to_dashboard'); await click('Ventas');
     await wait("document.body.textContent.includes('Nueva cotización')", 'sales_loaded');
     await click('Nueva cotización');
-    await wait("document.body.textContent.includes('Cliente QA')", 'catalog_loaded');
-    await click('Cliente QA'); await click('Producto QA (100.00 MXN)');
+    await wait("document.body.textContent.includes('Seleccionar cliente')", 'catalog_loaded');
+    await click('Seleccionar cliente'); await click('Cliente QA'); await click('Seleccionar producto de partida 1'); await click('Producto QA (100.00 MXN)');
     await fill(['2', '100', '16']);
     await click('Guardar cotización');
     await wait("document.body.textContent.includes('COT-000001')", 'quote_created');

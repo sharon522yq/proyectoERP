@@ -1,9 +1,13 @@
+const money = require('../../utils/money');
+const atomic = require('../../utils/atomic');
 const repo = require('./finance.repository');
 const { ApiError } = require('../../utils/ApiError');
 const { logAudit } = require('../../middlewares/audit');
 
 async function createAccount(data, ctx) {
-  const account = await repo.createAccount({ ...data, companyId: ctx.companyId });
+  if (data.balance && Number(data.balance) !== 0) throw new ApiError(400, 'Registra el saldo inicial mediante un movimiento para conservar su trazabilidad.', 'OPENING_MOVEMENT_REQUIRED');
+  if (await repo.findAccountByCode(ctx.companyId, data.code)) throw new ApiError(409, 'Este código de cuenta ya existe. Utiliza otro código.', 'ACCOUNT_CODE_TAKEN');
+  const account = await repo.createAccount({ ...data, balance: 0, companyId: ctx.companyId });
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'CREATE', module: 'finance.accounts', documentId: String(account._id), newData: { code: account.code, name: account.name }, ip: ctx.ip });
   return account;
 }
@@ -17,6 +21,16 @@ async function getAccount(id, ctx) {
 }
 
 async function createTransaction(data, ctx) {
+  if (!['INCOME', 'EXPENSE'].includes(data.type)) throw new ApiError(400, 'Las transferencias entre cuentas requieren un movimiento de origen y destino vinculado. Esta operación aún no está habilitada.', 'TRANSFER_NOT_SUPPORTED');
+  await require('./account.model').updateOne({ _id: data.accountId, companyId: ctx.companyId }, { $inc: { __v: 1 } });
+  if (data.requestId) {
+    const previous = await require('./transaction.model').findOne({ companyId: ctx.companyId, requestId: data.requestId });
+    if (previous) {
+      if (String(previous.accountId) !== String(data.accountId) || previous.type !== data.type || previous.amount !== data.amount)
+        throw new ApiError(409, 'Este intento de registro ya se utilizó con otros datos. Actualiza los movimientos.', 'TRANSACTION_REQUEST_CONFLICT');
+      return previous;
+    }
+  }
   const account = await repo.findAccountById(data.accountId);
   if (!account || String(account.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Cuenta no encontrada', 'ACCOUNT_NOT_FOUND');
 
@@ -24,7 +38,7 @@ async function createTransaction(data, ctx) {
 
   // Update balance
   const delta = data.type === 'INCOME' ? data.amount : -data.amount;
-  await repo.updateAccount(account._id, { balance: account.balance + delta });
+  await repo.incrementBalance(account._id, delta);
 
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'CREATE', module: 'finance.transactions', documentId: String(tx._id), newData: { amount: data.amount, type: data.type }, ip: ctx.ip });
   return tx;
@@ -39,7 +53,7 @@ async function getSummary(ctx) {
   const liabilities = accounts.filter(a => a.type === 'LIABILITY').reduce((s, a) => s + a.balance, 0);
   const income = accounts.filter(a => a.type === 'INCOME').reduce((s, a) => s + a.balance, 0);
   const expenses = accounts.filter(a => a.type === 'EXPENSE').reduce((s, a) => s + a.balance, 0);
-  return { assets, liabilities, income, expenses, netIncome: income - expenses };
+  return { assets: money(assets), liabilities: money(liabilities), income: money(income), expenses: money(expenses), netIncome: money(income - expenses) };
 }
 
 // ---- Asientos automáticos entre módulos (D-010) ----
@@ -69,9 +83,9 @@ async function postSystemTransaction(entry) {
     category, createdBy: userId
   });
   const delta = type === 'INCOME' ? amount : -amount;
-  await repo.updateAccount(account._id, { balance: (account.balance || 0) + delta });
+  await repo.incrementBalance(account._id, delta);
   await logAudit({ userId, companyId, action: 'CREATE', module: 'finance.auto', documentId: String(tx._id), newData: { accountCode, type, amount, referenceType } });
   return tx;
 }
 
-module.exports = { createAccount, listAccounts, getAccount, createTransaction, listTransactions, getSummary, postSystemTransaction };
+module.exports = { createAccount, listAccounts, getAccount, createTransaction: atomic(createTransaction), listTransactions, getSummary, postSystemTransaction: atomic(postSystemTransaction) };

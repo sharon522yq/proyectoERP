@@ -1,3 +1,4 @@
+const { requireEnabledModule } = require('../../middlewares/modules');
 const { Router } = require('express');
 const rateLimit = require('express-rate-limit');
 const { authenticate, requirePermission, scopeCompany } = require('../../middlewares/auth');
@@ -7,7 +8,7 @@ const v = require('./ai.validation');
 const ctrl = require('./ai.controller');
 
 const router = Router();
-router.use(authenticate, scopeCompany);
+router.use(authenticate, scopeCompany, requireEnabledModule('ai'));
 
 // Rate limit específico de IA (por IP). Complementa los techos diarios por
 // usuario/empresa (ai.limits) y el límite global (300/15min).

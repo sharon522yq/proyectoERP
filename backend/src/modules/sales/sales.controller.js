@@ -11,7 +11,7 @@ const approveQuote = asyncHandler(async (req, res) => { res.json({ success: true
 // Orders
 const createOrderFromQuote = asyncHandler(async (req, res) => { res.status(201).json({ success: true, data: await svc.createOrderFromQuote(req.params.quoteId, ctx(req)) }); });
 const listOrders = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.listOrders(ctx(req), req.query) }); });
-const updateOrderStatus = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.updateOrderStatus(req.params.id, req.body.status, ctx(req)) }); });
+const updateOrderStatus = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.updateOrderStatus(req.params.id, req.body.status, ctx(req), req.body.warehouseId) }); });
 
 // Invoices
 const createInvoiceFromOrder = asyncHandler(async (req, res) => { res.status(201).json({ success: true, data: await svc.createInvoiceFromOrder(req.params.orderId, ctx(req)) }); });

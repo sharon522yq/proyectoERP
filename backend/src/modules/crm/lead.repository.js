@@ -1,3 +1,4 @@
+const searchText = require('../../utils/searchText');
 const Lead = require('./lead.model');
 
 async function create(data) { return Lead.create(data); }

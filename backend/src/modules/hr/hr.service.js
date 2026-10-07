@@ -28,6 +28,8 @@ async function listDepartments(ctx) { return repo.listDepartments(ctx.companyId)
 
 async function createEmployee(data, ctx) {
   await validateReferences(data, ctx);
+  const existing = await require('./employee.model').exists({ companyId: ctx.companyId, employeeId: data.employeeId });
+  if (existing) throw new ApiError(409, 'Este código de empleado ya está registrado. Utiliza otro código o edita su ficha.', 'EMPLOYEE_CODE_TAKEN');
   const emp = await repo.createEmployee({ ...pick(data, employeeFields), companyId: ctx.companyId });
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'CREATE', module: 'hr.employees', documentId: String(emp._id), newData: { name: emp.name, employeeId: emp.employeeId }, ip: ctx.ip });
   return emp;

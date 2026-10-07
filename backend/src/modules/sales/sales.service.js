@@ -1,3 +1,4 @@
+const money = require('../../utils/money');
 const mongoose = require('mongoose');
 // Propagate transaction sessions through sales, inventory, finance and audit.
 mongoose.set('transactionAsyncLocalStorage', true);
@@ -31,18 +32,24 @@ async function assertProductsInCompany(items, companyId) {
   }
 }
 
-async function resolveWarehouse(ctx) {
+async function resolveWarehouse(ctx, selectedId) {
   const warehouses = (await inventoryService.listWarehouses(ctx)).filter(w => w.active);
   if (!warehouses.length) {
     throw new ApiError(400, 'La empresa no tiene almacenes configurados; crea uno antes de confirmar pedidos', 'WAREHOUSE_REQUIRED');
   }
+  if (selectedId) {
+    const selected = warehouses.find(item => String(item._id) === String(selectedId));
+    if (!selected) throw new ApiError(404, 'Almacén no encontrado o inactivo', 'WAREHOUSE_NOT_FOUND');
+    return selected;
+  }
+  if (warehouses.length > 1) throw new ApiError(400, 'Selecciona el almacén de salida antes de confirmar el pedido.', 'WAREHOUSE_REQUIRED');
   return warehouses[0];
 }
 
 // Salida automática de stock por pedido confirmado (agrupada por producto,
 // con pre-validación total para evitar salidas parciales).
 async function releaseStock(order, ctx) {
-  const warehouse = await resolveWarehouse(ctx);
+  const warehouse = await resolveWarehouse(ctx, order.warehouseId);
   const grouped = new Map();
   for (const item of order.items) {
     const key = String(item.productId);
@@ -64,14 +71,14 @@ function calcTotals(items) {
   for (const item of items) {
     const line = item.quantity * item.unitPrice;
     const disc = item.discount || 0;
-    const net = line - disc;
-    const tax = net * (item.taxRate || 0) / 100;
+    const net = money(line - disc);
+    const tax = money(net * (item.taxRate || 0) / 100);
     item.subtotal = net;
     subtotal += net;
     discountTotal += disc;
     taxTotal += tax;
   }
-  return { subtotal, discountTotal, taxTotal, total: subtotal + taxTotal };
+  return { subtotal: money(subtotal), discountTotal: money(discountTotal), taxTotal: money(taxTotal), total: money(subtotal + taxTotal) };
 }
 
 // ---- Quotes ----
@@ -82,7 +89,7 @@ async function createQuote(data, ctx) {
   await assertProductsInCompany(data.items, ctx.companyId);
   const folio = await repo.nextFolio(ctx.companyId, 'COT');
   const totals = calcTotals(data.items);
-  const quote = await repo.createQuote({ ...data, ...totals, folio, companyId: ctx.companyId, branchId: ctx.branchId, assignedTo: ctx.userId });
+  const quote = await repo.createQuote({ ...data, status: 'DRAFT', ...totals, folio, companyId: ctx.companyId, branchId: ctx.branchId, assignedTo: ctx.userId });
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'CREATE', module: 'sales.quotes', documentId: String(quote._id), newData: { folio, total: quote.total }, ip: ctx.ip });
   return quote;
 }
@@ -116,15 +123,20 @@ async function createOrderFromQuote(quoteId, ctx) {
 
 async function listOrders(ctx, query) { return repo.listOrders(ctx.companyId, query); }
 
-async function updateOrderStatus(id, status, ctx) {
+async function updateOrderStatus(id, status, ctx, warehouseId) {
+  await require('./salesOrder.model').updateOne({ _id: id, companyId: ctx.companyId }, { $inc: { __v: 1 } });
   const order = await repo.findOrderById(id);
   if (!order || String(order.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Pedido no encontrado', 'ORDER_NOT_FOUND');
   const allowed = ORDER_TRANSITIONS[order.status] || [];
   if (!allowed.includes(status)) {
     throw new ApiError(400, `Transición de estado inválida: ${order.status} → ${status || '(vacío)'}`, 'INVALID_STATUS_TRANSITION');
   }
-  if (status === 'CONFIRMED') await releaseStock(order, ctx);
-  const updated = await repo.updateOrder(id, { status });
+  if (status === 'CONFIRMED') {
+    const warehouse = await resolveWarehouse(ctx, warehouseId || order.warehouseId);
+    order.warehouseId = warehouse._id;
+    await releaseStock(order, ctx);
+  }
+  const updated = await repo.updateOrder(id, { status, ...(order.warehouseId ? { warehouseId: order.warehouseId } : {}) });
   await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'UPDATE', module: 'sales.orders', documentId: id, previousData: { status: order.status }, newData: { status }, ip: ctx.ip });
   return updated;
 }
@@ -166,16 +178,27 @@ async function listInvoices(ctx, query) { return repo.listInvoices(ctx.companyId
 
 // ---- Payments ----
 async function registerPayment(invoiceId, data, ctx) {
+  if (!Number.isFinite(data.amount) || data.amount <= 0) throw new ApiError(400, 'Escribe un importe recibido válido, mayor que cero.', 'INVALID_PAYMENT_AMOUNT');
+  await require('./invoice.model').updateOne({ _id: invoiceId, companyId: ctx.companyId }, { $inc: { __v: 1 } });
+  if (data.requestId) {
+    const previous = await require('./payment.model').findOne({ companyId: ctx.companyId, requestId: data.requestId });
+    if (previous) {
+      if (String(previous.invoiceId) !== String(invoiceId) || previous.amount !== data.amount || previous.method !== data.method)
+        throw new ApiError(409, 'Este intento de cobro ya se utilizó con otros datos. Actualiza la factura.', 'PAYMENT_REQUEST_CONFLICT');
+      return previous;
+    }
+  }
   const invoice = await repo.findInvoiceById(invoiceId);
   if (!invoice || String(invoice.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Factura no encontrada', 'INVOICE_NOT_FOUND');
+  if (invoice.status === 'CANCELLED') throw new ApiError(409, 'La factura está cancelada y no admite cobros.', 'INVOICE_CANCELLED');
   if (invoice.status === 'PAID') throw new ApiError(400, 'Factura ya pagada', 'INVOICE_ALREADY_PAID');
-  if (data.amount > (invoice.total - invoice.paidAmount)) throw new ApiError(400, 'El monto excede el saldo pendiente', 'AMOUNT_EXCEEDS');
+  if (data.amount > money(invoice.total - invoice.paidAmount)) throw new ApiError(400, 'El monto excede el saldo pendiente', 'AMOUNT_EXCEEDS');
 
   const folio = await repo.nextFolio(ctx.companyId, 'PAG');
-  const payment = await repo.createPayment({ ...data, folio, invoiceId, customerId: invoice.customerId, companyId: ctx.companyId, branchId: ctx.branchId, receivedBy: ctx.userId });
+  const payment = await repo.createPayment({ ...data, status: 'CONFIRMED', folio, invoiceId, customerId: invoice.customerId, companyId: ctx.companyId, branchId: ctx.branchId, receivedBy: ctx.userId });
 
-  const newPaid = invoice.paidAmount + data.amount;
-  const newStatus = newPaid >= invoice.total ? 'PAID' : 'PARTIAL';
+  const newPaid = money(invoice.paidAmount + data.amount);
+  const newStatus = newPaid >= money(invoice.total) ? 'PAID' : 'PARTIAL';
   await repo.updateInvoice(invoiceId, { paidAmount: newPaid, status: newStatus });
 
   // Enlace con Finanzas (D-010): el pago acredita caja y reduce Cuentas por Cobrar
@@ -200,11 +223,11 @@ async function registerPayment(invoiceId, data, ctx) {
 
 async function listPayments(ctx, query) { return repo.listPayments(ctx.companyId, query); }
 
-const atomic = fn => (...args) => mongoose.connection.transaction(() => fn(...args));
+const atomic = require('../../utils/atomic');
 module.exports = {
   createQuote, listQuotes, approveQuote,
   createOrderFromQuote: atomic(createOrderFromQuote), listOrders,
   updateOrderStatus: atomic(updateOrderStatus),
   createInvoiceFromOrder: atomic(createInvoiceFromOrder), listInvoices,
-  registerPayment, listPayments
+  registerPayment: atomic(registerPayment), listPayments
 };

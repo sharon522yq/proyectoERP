@@ -18,13 +18,13 @@ async function findStock(companyId, warehouseId, productId) {
   return Inventory.findOne({ companyId, warehouseId, productId });
 }
 async function upsertStock(companyId, warehouseId, productId, quantityDelta) {
-  const inv = await Inventory.findOne({ companyId, warehouseId, productId });
-  if (!inv) {
-    return Inventory.create({ companyId, warehouseId, productId, quantity: quantityDelta, lastMovementAt: new Date() });
-  }
-  const newQty = inv.quantity + quantityDelta;
-  await Inventory.updateOne({ _id: inv._id }, { $set: { quantity: newQty, lastMovementAt: new Date() } });
-  return Inventory.findById(inv._id);
+  const filter = { companyId, warehouseId, productId };
+  if (quantityDelta < 0) filter.quantity = { $gte: -quantityDelta };
+  const stock = await Inventory.findOneAndUpdate(filter,
+    { $inc: { quantity: quantityDelta }, $set: { lastMovementAt: new Date() } },
+    { new: true, upsert: quantityDelta >= 0, setDefaultsOnInsert: true });
+  if (!stock) throw new (require('../../utils/ApiError').ApiError)(400, 'Existencias insuficientes. Revisa la cantidad y el almacén.', 'INSUFFICIENT_STOCK');
+  return stock;
 }
 async function listStock(companyId, { warehouseId, productId, page = 1, limit = 20 } = {}) {
   const filter = { companyId };

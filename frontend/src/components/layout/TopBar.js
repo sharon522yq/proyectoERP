@@ -1,26 +1,27 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { tokens } from '../../theme/tokens';
 
 export default function TopBar({ onToggleMobileMenu, title }) {
   const { user, logout } = useAuth();
+  const compact = useWindowDimensions().width < 640;
 
   return (
-    <View style={[styles.topbar, tokens.shadows.sm]}>
+    <View style={[styles.topbar, compact && styles.compact, tokens.shadows.sm]}>
       <View style={styles.left}>
         {onToggleMobileMenu ? (
-          <TouchableOpacity style={styles.menuButton} onPress={onToggleMobileMenu}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Abrir menú de módulos" style={styles.menuButton} onPress={onToggleMobileMenu}>
             <Text style={styles.menuIcon}>☰</Text>
           </TouchableOpacity>
         ) : null}
-        <Text style={styles.title}>{title || 'Dashboard'}</Text>
+        <Text numberOfLines={1} style={styles.title}>{title || 'Dashboard'}</Text>
       </View>
       <View style={styles.right}>
         {user ? (
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userRole}>({user.role})</Text>
+            <Text numberOfLines={1} style={[styles.userName, compact && styles.compactName]}>{user.name}</Text>
+            {!compact && <Text style={styles.userRole}>({user.role})</Text>}
           </View>
         ) : null}
         <TouchableOpacity accessibilityRole="button" style={styles.logoutBtn} onPress={logout}>
@@ -32,6 +33,8 @@ export default function TopBar({ onToggleMobileMenu, title }) {
 }
 
 const styles = StyleSheet.create({
+  compact: { paddingHorizontal: 12, gap: 8 },
+  compactName: { maxWidth: 100 },
   topbar: {
     height: 64,
     backgroundColor: tokens.colors.surface,
@@ -44,6 +47,7 @@ const styles = StyleSheet.create({
     zIndex: 10
   },
   left: {
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.spacing.md
@@ -56,6 +60,7 @@ const styles = StyleSheet.create({
     color: tokens.colors.text
   },
   title: {
+    flexShrink: 1,
     fontSize: tokens.typography.sizes.lg,
     fontWeight: '600',
     color: tokens.colors.text

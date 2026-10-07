@@ -75,3 +75,15 @@ describe('Security - Projects', () => {
     expect(res.status).toBe(401);
   });
 });
+
+test('project completion is blocked by pending tasks and closed projects reject new tasks', async () => {
+  const auth = { Authorization: 'Bearer ' + token };
+  const created = await request(app).post('/api/v1/projects').set(auth).send({ name: 'Proyecto de cierre' });
+  const id = created.body.data._id;
+  const task = await request(app).post('/api/v1/projects/tasks').set(auth).send({ projectId: id, title: 'Pendiente de cierre' });
+  expect((await request(app).put('/api/v1/projects/' + id).set(auth).send({ status: 'COMPLETED' })).body.code).toBe('PROJECT_TASKS_PENDING');
+  expect((await request(app).put('/api/v1/projects/tasks/' + task.body.data._id).set(auth).send({ status: 'DONE' })).status).toBe(200);
+  expect((await request(app).put('/api/v1/projects/' + id).set(auth).send({ status: 'COMPLETED' })).status).toBe(200);
+  expect((await request(app).post('/api/v1/projects/tasks').set(auth).send({ projectId: id, title: 'No admitida' })).body.code).toBe('PROJECT_CLOSED');
+  expect((await request(app).put('/api/v1/projects/tasks/' + task.body.data._id).set(auth).send({ status: 'TODO' })).body.code).toBe('PROJECT_CLOSED');
+});

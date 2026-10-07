@@ -5,7 +5,7 @@ import { tokens } from '../../theme/tokens';
 export default function PageHeader({ title, subtitle, actionTitle, onAction }) {
   return (
     <View style={styles.header}>
-      <View>
+      <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
@@ -15,8 +15,11 @@ export default function PageHeader({ title, subtitle, actionTitle, onAction }) {
 }
 
 const styles = StyleSheet.create({
+  content: { flex: 1, minWidth: 220 },
   header: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: tokens.spacing.md,
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacing.lg

@@ -164,7 +164,7 @@ export const salesApi = {
   approveQuote: (id) => api.post(`/sales/quotes/${id}/approve`).then((r) => r.data.data),
   createOrderFromQuote: (quoteId) => api.post(`/sales/quotes/${quoteId}/order`).then((r) => r.data.data),
   getOrders: (params) => api.get('/sales/orders', { params }).then((r) => r.data.data),
-  updateOrderStatus: (id, status) => api.put(`/sales/orders/${id}/status`, { status }).then((r) => r.data.data),
+  updateOrderStatus: (id, status, warehouseId) => api.put(`/sales/orders/${id}/status`, { status, ...(warehouseId ? { warehouseId } : {}) }).then((r) => r.data.data),
   createInvoiceFromOrder: (orderId) => api.post(`/sales/orders/${orderId}/invoice`).then((r) => r.data.data),
   getInvoices: (params) => api.get('/sales/invoices', { params }).then((r) => r.data.data),
   createPayment: (invoiceId, data) => api.post(`/sales/invoices/${invoiceId}/payments`, data).then((r) => r.data.data),
@@ -174,7 +174,7 @@ export const salesApi = {
 export const purchasesApi = {
   getPurchases: (params) => api.get('/purchases', { params }).then((r) => r.data.data),
   createPurchase: (data) => api.post('/purchases', data).then((r) => r.data.data),
-  updatePurchaseStatus: (id, status) => api.put(`/purchases/${id}/status`, { status }).then((r) => r.data.data)
+  updatePurchaseStatus: (id, status, warehouseId) => api.put(`/purchases/${id}/status`, { status, ...(warehouseId ? { warehouseId } : {}) }).then((r) => r.data.data)
 };
 
 export const financeApi = {
@@ -206,7 +206,7 @@ export const projectsApi = {
 };
 
 export const productionApi = {
-  getBoms: () => api.get('/production/bom').then((r) => r.data.data),
+  getBoms: (params) => api.get('/production/bom', { params }).then((r) => r.data.data),
   createBom: (data) => api.post('/production/bom', data).then((r) => r.data.data),
   getOrders: (params) => api.get('/production/orders', { params }).then((r) => r.data.data),
   createOrder: (data) => api.post('/production/orders', data).then((r) => r.data.data),

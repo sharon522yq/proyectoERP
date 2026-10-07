@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
+  requestId: { type: String, maxlength: 80 },
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
   folio: { type: String, required: true, trim: true },
@@ -16,4 +17,5 @@ const paymentSchema = new mongoose.Schema({
 
 paymentSchema.index({ companyId: 1, createdAt: -1 });
 
+paymentSchema.index({ companyId: 1, requestId: 1 }, { unique: true, partialFilterExpression: { requestId: { $type: 'string' } } });
 module.exports = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);

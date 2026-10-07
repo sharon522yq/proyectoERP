@@ -10,12 +10,13 @@ function harness(api) {
   const react = {
     createElement:(type,props,...children)=>({type,props,children}),
     useState:initial=>{const key=cursor++;if(!(key in values))values[key]=initial;return[values[key],v=>values[key]=v];},
-    useEffect:fn=>effects.push(fn)
+    useEffect:fn=>effects.push(fn), useRef:initial=>({current:initial})
   };
   const ctx={exports:{},require:name=>{
+    if(name.includes('context/AuthContext')) return {useAuth:()=>({has:()=>true})};
     if(name==='react') return react;
     if(name==='react-native') return {View:'View',Text:'Text',ScrollView:'ScrollView',Button:'Button',StyleSheet:{create:v=>v}};
-    if(name.includes('services/api')) return {financeApi:api};
+    if(name.includes('services/api')) return {financeApi:{getAccounts:async()=>[],...api}};;
     if(name.includes('theme/tokens')) return {tokens:{colors:{},spacing:{},typography:{sizes:{}},shadows:{},borderRadius:{}}};
     return function Component(){};
   }};
