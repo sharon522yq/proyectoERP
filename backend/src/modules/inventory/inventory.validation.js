@@ -1,4 +1,4 @@
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 
 const createWarehouse = [
   body('name').isString().trim().isLength({ min: 1, max: 150 }),
@@ -14,4 +14,5 @@ const adjustStock = [
 ];
 const idParam = [param('id').isMongoId()];
 
-module.exports = { updateWarehouse, createWarehouse, adjustStock, idParam };
+const exportQuery = [query('warehouseId').optional().isMongoId()];
+module.exports = { exportQuery, updateWarehouse, createWarehouse, adjustStock, idParam };

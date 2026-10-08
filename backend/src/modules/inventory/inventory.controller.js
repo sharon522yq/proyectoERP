@@ -18,4 +18,8 @@ const adjustStock = asyncHandler(async (req, res) => { res.json({ success: true,
 const listMovements = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.listMovements(ctx(req), req.query) }); });
 const kardex = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.kardex(req.params.productId, req.params.warehouseId, ctx(req)) }); });
 
-module.exports = { updateWarehouse, deleteWarehouse, createWarehouse, listWarehouses, getWarehouse, getStock, adjustStock, listMovements, kardex };
+const exportInventory = asyncHandler(async (req, res) => {
+  const data = await require('./inventory-export.service').exportInventory(ctx(req), req.query);
+  res.set('Cache-Control', 'private, no-store').json({ success: true, data });
+});
+module.exports = { exportInventory, updateWarehouse, deleteWarehouse, createWarehouse, listWarehouses, getWarehouse, getStock, adjustStock, listMovements, kardex };
