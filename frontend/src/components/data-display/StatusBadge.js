@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text } from '../../design/ui';
 import { tokens } from '../../theme/tokens';
 
 export default function StatusBadge({ status, type = 'default' }) {

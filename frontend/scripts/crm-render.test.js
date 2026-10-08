@@ -16,7 +16,7 @@ test('CRM renders existing leads and an accessible conversion action', () => {
   const context = { exports: {}, require: name => {
     if (name.includes('context/AuthContext')) return { useAuth: () => ({ has: () => true }) };
     if (name === 'react') return react;
-    if (name === 'react-native') return native;
+    if ((name === 'react-native' || name.endsWith('/design/ui'))) return native;
     if (name.includes('theme/tokens')) return { tokens: { colors: {}, typography: { sizes: {} }, spacing: {}, shadows: {}, borderRadius: {} } };
     return {};
   } };

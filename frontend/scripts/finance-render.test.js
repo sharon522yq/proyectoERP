@@ -15,7 +15,7 @@ function harness(api) {
   const ctx={exports:{},require:name=>{
     if(name.includes('context/AuthContext')) return {useAuth:()=>({has:()=>true})};
     if(name==='react') return react;
-    if(name==='react-native') return {View:'View',Text:'Text',ScrollView:'ScrollView',Button:'Button',StyleSheet:{create:v=>v}};
+    if((name==='react-native' || name.endsWith('/design/ui'))) return {View:'View',Text:'Text',ScrollView:'ScrollView',Button:'Button',StyleSheet:{create:v=>v}};
     if(name.includes('services/api')) return {financeApi:{getAccounts:async()=>[],...api}};;
     if(name.includes('theme/tokens')) return {tokens:{colors:{},spacing:{},typography:{sizes:{}},shadows:{},borderRadius:{}}};
     return function Component(){};

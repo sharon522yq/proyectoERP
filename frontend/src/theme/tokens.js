@@ -9,9 +9,9 @@ export const tokens = {
   spacing,
   shadows,
   borderRadius: {
-    sm: 4,
-    md: 8,
-    lg: 12,
+    sm: 8,
+    md: 12,
+    lg: 18,
     full: 9999
   }
 };

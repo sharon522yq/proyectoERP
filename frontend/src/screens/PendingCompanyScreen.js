@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { Text, TouchableOpacity } from '../design/ui';
 import { useAuth } from '../context/AuthContext';
 import { tokens } from '../theme/tokens';
 

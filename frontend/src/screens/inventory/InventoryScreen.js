@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Button, Modal } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, TextInput, TouchableOpacity, ScrollView, Button, Modal } from '../../design/ui';
 import WarehouseDetail from './WarehouseDetail';
+import SearchSelect from '../../components/SearchSelect';
+import { useBackAction } from '../../design/NavigationBack';
 import InventoryExportButton from '../../components/InventoryExportButton';
 import { inventoryApi, productsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -13,6 +16,7 @@ import EmptyState from '../../components/data-display/EmptyState';
 export default function InventoryScreen({ onBack }) {
   const { has } = useAuth();
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
+  useBackAction(() => { if (!selectedWarehouse) return false; setSelectedWarehouse(null); return true; });
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [warehouseForm, setWarehouseForm] = useState(false);
@@ -45,7 +49,7 @@ export default function InventoryScreen({ onBack }) {
       setProducts(catalog.items || catalog || []);
       setStockList(data.items || data || []);
     } catch (err) {
-      setError(err.message || 'Error al cargar stock');
+      setError(err.response?.data?.message || 'Error al cargar stock');
     } finally {
       setLoading(false);
     }
@@ -89,7 +93,9 @@ export default function InventoryScreen({ onBack }) {
 
       {has('branches.create') && <Button title={warehouseForm ? 'Cerrar almacén' : 'Nuevo almacén'} onPress={() => { setWarehouseForm(!warehouseForm); setFormError(''); }} />}
       {warehouseForm && <View style={{ gap: 8 }}>
+        <Text style={{ fontWeight: '600' }}>Nombre del almacén (obligatorio)</Text>
         <TextInput accessibilityLabel="Nombre del almacén" style={styles.input} placeholder="Nombre del almacén" maxLength={150} value={warehouseName} onChangeText={setWarehouseName} editable={!saving} />
+        <Text style={{ fontWeight: '600' }}>Código del almacén (obligatorio)</Text>
         <TextInput accessibilityLabel="Código del almacén" style={styles.input} placeholder="Código del almacén" maxLength={20} value={warehouseCode} onChangeText={setWarehouseCode} editable={!saving} />
         {!!formError && <Text style={styles.error}>{formError}</Text>}
         <Button title="Guardar almacén" disabled={saving} onPress={async () => {
@@ -133,21 +139,20 @@ export default function InventoryScreen({ onBack }) {
         </ScrollView>
       )}
 
-      <Modal visible={modalVisible} animationType="slide" transparent>
+      <Modal onRequestClose={() => { if (!saving) setModalVisible(false); }} visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, tokens.shadows.lg]}>
             <Text style={styles.modalTitle}>Ajuste Autorizado de Stock</Text>
-            <Text>Selecciona producto</Text>
-            <ScrollView style={{ maxHeight: 120 }}>{products.map(p => <Button key={p._id} title={p.name} color={productId === p._id ? tokens.colors.primary : '#64748b'} disabled={saving} onPress={() => setProductId(p._id)} />)}</ScrollView>
-            <TextInput accessibilityLabel="ID de Producto" style={styles.input} placeholder="ID de Producto" value={productId} onChangeText={setProductId} />
-            <Text>Selecciona almacén</Text>
-            <ScrollView style={{ maxHeight: 120 }}>{warehouses.filter(w => w.active).map(w => <Button key={w._id} title={w.name} color={warehouseId === w._id ? tokens.colors.primary : '#64748b'} disabled={saving} onPress={() => setWarehouseId(w._id)} />)}</ScrollView>
-            <TextInput accessibilityLabel="ID de Almacén" style={styles.input} placeholder="ID de Almacén" value={warehouseId} onChangeText={setWarehouseId} />
-            <TextInput style={styles.input} placeholder="Cantidad (+/-)" value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
-            <TextInput style={styles.input} placeholder="Motivo obligatorio del ajuste" value={reason} onChangeText={setReason} />
+            <SearchSelect label="Producto" placeholder="Seleccionar producto" items={products} value={productId} onChange={setProductId} disabled={saving} />
+            <SearchSelect label="Almacén" placeholder="Seleccionar almacén" items={warehouses.filter(w => w.active)} value={warehouseId} onChange={setWarehouseId} disabled={saving} />
+            <Text style={{ fontWeight: '600' }}>Cantidad del ajuste (obligatoria)</Text>
+            <Text>Usa un entero positivo para agregar existencias o negativo para retirarlas.</Text>
+            <TextInput accessibilityLabel="Cantidad (+/-)" style={styles.input} placeholder="Cantidad (+/-)" value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
+            <Text style={{ fontWeight: '600' }}>Motivo del ajuste (obligatorio)</Text>
+            <TextInput accessibilityLabel="Motivo obligatorio del ajuste" style={styles.input} placeholder="Motivo obligatorio del ajuste" value={reason} onChangeText={setReason} />
             {!!formError && <Text style={styles.error}>{formError}</Text>}
             <View style={styles.modalActions}>
-              <Button title="Cancelar" color="#64748b" onPress={() => setModalVisible(false)} />
+              <Button title="Cancelar" disabled={saving} color={tokens.colors.surfaceHover} onPress={() => setModalVisible(false)} />
               <Button title="Confirmar Ajuste" disabled={saving} onPress={handleAdjust} />
             </View>
           </View>
@@ -159,9 +164,9 @@ export default function InventoryScreen({ onBack }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: tokens.spacing.md },
-  toolbar: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: tokens.spacing.md },
+  toolbar: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', marginBottom: tokens.spacing.md },
   list: { gap: tokens.spacing.sm, paddingBottom: tokens.spacing.xl },
-  card: { backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: tokens.colors.border },
+  card: { backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.md, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: tokens.colors.border },
   productText: { fontSize: tokens.typography.sizes.md, fontWeight: '600', color: tokens.colors.text },
   warehouseText: { fontSize: tokens.typography.sizes.xs, color: tokens.colors.textSecondary, marginTop: 2 },
   stockBadge: { backgroundColor: tokens.colors.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: tokens.borderRadius.full },
@@ -171,5 +176,5 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: tokens.typography.sizes.lg, fontWeight: '700', color: tokens.colors.text },
   input: { borderWidth: 1, borderColor: tokens.colors.border, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.sm, backgroundColor: tokens.colors.surfaceVariant },
   error: { color: tokens.colors.error, fontSize: tokens.typography.sizes.sm },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: tokens.spacing.md, marginTop: tokens.spacing.sm }
+  modalActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: tokens.spacing.md, marginTop: tokens.spacing.sm }
 });

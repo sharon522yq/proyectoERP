@@ -18,7 +18,17 @@
       "output": "single"
     },
     "plugins": [
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/SourceSansPro-Regular.ttf",
+            "./assets/fonts/SourceSansPro-SemiBold.ttf",
+            "./assets/fonts/SourceSansPro-Bold.ttf"
+          ]
+        }
+      ]
     ],
     "extra": {
       "eas": {

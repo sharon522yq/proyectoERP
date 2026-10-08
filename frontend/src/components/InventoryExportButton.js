@@ -1,5 +1,7 @@
+import { tokens } from '../theme/tokens';
 import React, { useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Platform } from 'react-native';
+import { Text, TouchableOpacity } from '../design/ui';
 import { useAuth } from '../context/AuthContext';
 import { inventoryApi } from '../services/api';
 import { saveInventoryExcel } from '../services/saveInventoryExcel';
@@ -22,11 +24,11 @@ export default function InventoryExportButton({ warehouseId }) {
     finally { running.current = false; setBusy(false); }
   };
   return <View style={{ gap: 8, marginVertical: 12, alignSelf: 'stretch' }}>
-    <TouchableOpacity accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={download} style={{ backgroundColor: busy ? '#64748b' : '#4338ca', borderRadius: 10, padding: 14, minHeight: 48, alignItems: 'center' }}>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={download} style={{ backgroundColor: busy ? tokens.colors.surfaceHover : tokens.colors.primary, borderRadius: 10, padding: 14, minHeight: 48, alignItems: 'center' }}>
       <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 16 }}>{busy ? 'Preparando Excel…' : label}</Text>
     </TouchableOpacity>
-    <Text style={{ color: '#475569', fontSize: 13 }}>Incluye existencias, reservas, disponibles y costos al momento de exportar. Cada descarga genera un archivo actualizado.</Text>
-    {!!error && <Text accessibilityRole="alert" style={{ color: '#b91c1c' }}>{error}</Text>}
-    {!!notice && <Text accessibilityLiveRegion="polite" style={{ color: '#166534' }}>{notice}</Text>}
+    <Text style={{ color: tokens.colors.textSecondary, fontSize: 13 }}>Incluye existencias, reservas, disponibles y costos al momento de exportar. Cada descarga genera un archivo actualizado.</Text>
+    {!!error && <Text accessibilityRole="alert" style={{ color: tokens.colors.error }}>{error}</Text>}
+    {!!notice && <Text accessibilityLiveRegion="polite" style={{ color: tokens.colors.success }}>{notice}</Text>}
   </View>;
 }

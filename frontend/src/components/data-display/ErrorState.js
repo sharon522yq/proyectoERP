@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, Button } from '../../design/ui';
 import { tokens } from '../../theme/tokens';
 
 export default function ErrorState({ message = 'Ocurrió un error al cargar los datos.', onRetry }) {
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessibilityRole="alert">
       <Text style={styles.title}>Error</Text>
       <Text style={styles.message}>{message}</Text>
       {onRetry ? <Button title="Reintentar" onPress={onRetry} /> : null}

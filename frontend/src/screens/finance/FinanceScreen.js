@@ -1,6 +1,7 @@
 import { operationError } from '../../services/operationError';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Button } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, ScrollView, Button } from '../../design/ui';
 import { financeApi } from '../../services/api';
 import { tokens } from '../../theme/tokens';
 import SearchSelect from '../../components/SearchSelect';
@@ -76,7 +77,7 @@ export default function FinanceScreen({ onBack }) {
             {formType === 'movement' && <>
               <Text>Registra una entrada o salida que ya ocurrió. Los cobros de ventas se capturan desde la factura; evita registrarlos otra vez aquí.</Text>
               <SearchSelect label="Caja o banco" placeholder="Seleccionar caja o banco" items={accounts.filter(account => account.type === 'ASSET' && account.code !== '1200')} value={accountId} onChange={setAccountId} disabled={busy} describe={account => account.name + ' · ' + account.code} />
-              <View style={{ flexDirection: 'row', gap: 12 }}><Button title="Entrada de dinero" disabled={busy} color={type === 'INCOME' ? tokens.colors.primary : '#64748b'} onPress={() => setType('INCOME')} /><Button title="Salida de dinero" disabled={busy} color={type === 'EXPENSE' ? tokens.colors.primary : '#64748b'} onPress={() => setType('EXPENSE')} /></View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}><Button title="Entrada de dinero" disabled={busy} color={type === 'INCOME' ? tokens.colors.primary : tokens.colors.surfaceHover} onPress={() => setType('INCOME')} /><Button title="Salida de dinero" disabled={busy} color={type === 'EXPENSE' ? tokens.colors.primary : tokens.colors.surfaceHover} onPress={() => setType('EXPENSE')} /></View>
             </>}
             <RecordEditor title={formType === 'account' ? 'Nueva caja o banco' : type === 'INCOME' ? 'Registrar dinero recibido' : 'Registrar dinero pagado'} fields={formType === 'account' ? accountFields : movementFields} values={form} onChange={setForm} onSave={save} onCancel={() => setForm(null)} busy={busy} error={formError} />
           </View>}
@@ -103,7 +104,7 @@ export default function FinanceScreen({ onBack }) {
               </View>
             ))
           )}
-<View style={{ flexDirection: 'row', gap: 12 }}><Button title="Anterior" disabled={busy || page === 1} onPress={() => setPage(page - 1)} /><Text>Página {page}</Text><Button title="Siguiente" disabled={busy || page * 20 >= total} onPress={() => setPage(page + 1)} /></View>
+<View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}><Button title="Anterior" disabled={busy || page === 1} onPress={() => setPage(page - 1)} /><Text>Página {page}</Text><Button title="Siguiente" disabled={busy || page * 20 >= total} onPress={() => setPage(page + 1)} /></View>
         </ScrollView>
       )}
     </View>
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
   metricsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing.md, marginBottom: tokens.spacing.lg },
   sectionTitle: { fontSize: tokens.typography.sizes.lg, fontWeight: '700', marginBottom: tokens.spacing.md },
   list: { paddingBottom: tokens.spacing.xl },
-  card: { backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: tokens.colors.border, marginBottom: tokens.spacing.sm },
+  card: { backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.md, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: tokens.colors.border, marginBottom: tokens.spacing.sm },
   titleText: { fontSize: tokens.typography.sizes.md, fontWeight: '600', color: tokens.colors.text },
   subText: { fontSize: tokens.typography.sizes.xs, color: tokens.colors.textSecondary, marginTop: 2 },
   amount: { fontSize: tokens.typography.sizes.md, fontWeight: '700' },

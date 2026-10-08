@@ -1,10 +1,12 @@
 import { operationError } from '../../services/operationError';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, ScrollView, StyleSheet, Button, Platform, Share } from 'react-native';
+import { View, StyleSheet, Platform, Share } from 'react-native';
+import { Text, TextInput, ScrollView, Button } from '../../design/ui';
 import { salesApi, crmApi, productsApi, inventoryApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { tokens } from '../../theme/tokens';
 import SearchSelect from '../../components/SearchSelect';
+import { useBackAction } from '../../design/NavigationBack';
 import PageHeader from '../../components/layout/PageHeader';
 import { invoiceHtml, invoiceText, money } from './invoiceDocument';
 
@@ -35,6 +37,7 @@ export default function SalesScreen({ onBack }) {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [catalogError, setCatalogError] = useState('');
+  useBackAction(() => { if (busy) return true; if (payment) { setPayment(null); return true; } if (selected) { setSelected(null); return true; } if (creating) { setCreating(false); return true; } return false; });
 
   useEffect(() => {
     let active = true;
@@ -122,7 +125,7 @@ export default function SalesScreen({ onBack }) {
       <PageHeader title="Ventas y facturación" subtitle="Cotización → Aprobación → Pedido → Confirmación → Factura interna" />
       <View style={styles.row}>
         {[['quotes', 'Cotizaciones', 'sales.quotes.read'], ['orders', 'Pedidos', 'sales.orders.read'], ['invoices', 'Facturas', 'sales.invoices.read']].filter(([, , permission]) => has(permission)).map(([key, label]) =>
-          <Button key={key} title={label} disabled={busy} color={tab === key ? tokens.colors.primary : '#64748b'} onPress={() => { setTab(key); setPage(1); setSelected(null); }} />)}
+          <Button key={key} title={label} disabled={busy} color={tab === key ? tokens.colors.primary : tokens.colors.surfaceHover} onPress={() => { setTab(key); setPage(1); setSelected(null); }} />)}
         {onBack && <Button title="Volver" onPress={onBack} />}
         <Button title="Actualizar" onPress={() => load()} disabled={busy} />
       </View>
@@ -179,7 +182,7 @@ export default function SalesScreen({ onBack }) {
         <Text>Importe recibido</Text>
         <TextInput accessibilityLabel="Importe recibido" style={styles.input} value={amount} keyboardType="decimal-pad" editable={!busy} onChangeText={setAmount} />
         <Text>Forma de pago</Text>
-        <View style={styles.row}>{[['CASH', 'Efectivo'], ['TRANSFER', 'Transferencia'], ['CARD', 'Tarjeta'], ['CHECK', 'Cheque'], ['OTHER', 'Otro']].map(([key, label]) => <Button key={key} title={label} disabled={busy} color={method === key ? tokens.colors.primary : '#64748b'} onPress={() => setMethod(key)} />)}</View>
+        <View style={styles.row}>{[['CASH', 'Efectivo'], ['TRANSFER', 'Transferencia'], ['CARD', 'Tarjeta'], ['CHECK', 'Cheque'], ['OTHER', 'Otro']].map(([key, label]) => <Button key={key} title={label} disabled={busy} color={method === key ? tokens.colors.primary : tokens.colors.surfaceHover} onPress={() => setMethod(key)} />)}</View>
         <Text>Referencia (opcional)</Text>
         <TextInput accessibilityLabel="Referencia del cobro" style={styles.input} value={reference} maxLength={100} editable={!busy} onChangeText={setReference} />
         <Button title="Confirmar dinero recibido" disabled={busy} onPress={async () => {

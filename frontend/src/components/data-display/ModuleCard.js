@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, TouchableOpacity } from '../../design/ui';
 import { tokens } from '../../theme/tokens';
 import AppLogo from '../branding/AppLogo';
 
@@ -10,7 +11,7 @@ export default function ModuleCard({ title, description, onPress }) {
         <AppLogo size={36} />
       </View>
       <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description} numberOfLines={2}>{description}</Text>
+      <Text style={styles.description}>{description}</Text>
     </TouchableOpacity>
   );
 }
@@ -22,7 +23,7 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.md,
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    width: 220,
+    width: 260, maxWidth: '100%', flexGrow: 1, flexBasis: 240,
     minHeight: 140,
     justifyContent: 'space-between'
   },
@@ -38,6 +39,6 @@ const styles = StyleSheet.create({
   description: {
     fontSize: tokens.typography.sizes.sm,
     color: tokens.colors.textSecondary,
-    lineHeight: 18
+    lineHeight: 22
   }
 });

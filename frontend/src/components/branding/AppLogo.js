@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { tokens } from '../../theme/tokens';
+// Original brand colors: changing the interface theme must never recolor this mark.
+const tokens = { colors: { primary: '#4f46e5', primaryLight: '#e0e7ff' } };
 
 export default function AppLogo({ size = 32 }) {
   return (
-    <View style={[styles.container, { width: size, height: size, borderRadius: size / 4 }]}>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}><View style={[styles.container, { width: 32, height: 32, borderRadius: 8, transform: [{ scale: size / 32 }] }]}>
       {/* Node graph representation in clean geometric shapes / SVG style */}
       <View style={[styles.node, styles.nodeTop]} />
       <View style={[styles.node, styles.nodeLeft]} />
@@ -13,7 +14,7 @@ export default function AppLogo({ size = 32 }) {
       <View style={styles.line1} />
       <View style={styles.line2} />
       <View style={styles.line3} />
-    </View>
+    </View></View>
   );
 }
 

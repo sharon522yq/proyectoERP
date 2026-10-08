@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Button } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, ScrollView, Button } from '../../design/ui';
 import { adminApi } from '../../services/api';
 import { tokens } from '../../theme/tokens';
 import PageHeader from '../../components/layout/PageHeader';
@@ -23,7 +24,7 @@ export default function AuditScreen({ onBack }) {
       const data = await adminApi.getAuditLogs();
       setLogs(data.items || data || []);
     } catch (err) {
-      setError(err.message || 'Error al cargar registros de auditoría');
+      setError(err.response?.data?.message || 'Error al cargar registros de auditoría');
     } finally {
       setLoading(false);
     }
@@ -58,9 +59,9 @@ export default function AuditScreen({ onBack }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: tokens.spacing.md },
-  toolbar: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: tokens.spacing.md },
+  toolbar: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', marginBottom: tokens.spacing.md },
   list: { gap: tokens.spacing.sm, paddingBottom: tokens.spacing.xl },
-  card: { backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: tokens.colors.border },
+  card: { backgroundColor: tokens.colors.surface, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.md, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: tokens.colors.border },
   titleText: { fontSize: tokens.typography.sizes.md, fontWeight: '600', color: tokens.colors.text },
   subText: { fontSize: tokens.typography.sizes.xs, color: tokens.colors.textSecondary, marginTop: 2 }
 });

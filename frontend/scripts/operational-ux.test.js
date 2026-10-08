@@ -6,7 +6,7 @@ const babel = require('@babel/core');
 function compile(file, react) {
   const filename = require.resolve(file);
   const code = babel.transformSync(fs.readFileSync(filename, 'utf8'), { filename, babelrc: false, configFile: false, plugins: ['@babel/plugin-transform-modules-commonjs', '@babel/plugin-transform-react-jsx'] }).code;
-  const ctx = { exports: {}, require: name => name === 'react' ? react : name === 'react-native' ? { View: 'View', Text: 'Text', TextInput: 'TextInput', Modal: 'Modal', ScrollView: 'ScrollView', Pressable: 'Pressable', Button: 'Button', StyleSheet: { create: value => value } } : { tokens: { colors: {} } } };
+  const ctx = { exports: {}, require: name => name === 'react' ? react : (name === 'react-native' || name.endsWith('/design/ui')) ? { View: 'View', Text: 'Text', TextInput: 'TextInput', Modal: 'Modal', ScrollView: 'ScrollView', Pressable: 'Pressable', Button: 'Button', StyleSheet: { create: value => value } } : { tokens: { colors: {} } } };
   vm.runInNewContext(code, ctx); return ctx.exports;
 }
 function nodes(tree) {

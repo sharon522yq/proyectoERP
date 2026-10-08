@@ -1,5 +1,7 @@
+import { tokens } from '../theme/tokens';
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, Button, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Text, TextInput, Button, ScrollView } from '../design/ui';
 import { aiApi } from '../services/api';
 
 // FASE 12 — Asistente IA (React Native + React Native Web).
@@ -94,22 +96,22 @@ export default function AIAssistantScreen({ onBack }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, padding: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  header: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   title: { fontSize: 20, fontWeight: '600' },
   chat: { flex: 1, marginBottom: 8 },
   chatContent: { paddingBottom: 8 },
-  empty: { color: '#666', fontSize: 14, marginVertical: 12 },
+  empty: { color: tokens.colors.textMuted, fontSize: 14, marginVertical: 12 },
   bubble: { borderRadius: 8, padding: 10, marginVertical: 4, maxWidth: '90%' },
-  userBubble: { backgroundColor: '#dbeafe', alignSelf: 'flex-end' },
-  aiBubble: { backgroundColor: '#f1f5f9', alignSelf: 'flex-start' },
-  bubbleRole: { fontSize: 11, color: '#555', marginBottom: 2, fontWeight: '600' },
+  userBubble: { backgroundColor: tokens.colors.infoLight, alignSelf: 'flex-end' },
+  aiBubble: { backgroundColor: tokens.colors.surfaceVariant, alignSelf: 'flex-start' },
+  bubbleRole: { fontSize: 11, color: tokens.colors.textSecondary, marginBottom: 2, fontWeight: '600' },
   bubbleText: { fontSize: 14 },
-  loadingRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 6 },
-  loadingText: { marginLeft: 8, color: '#555' },
-  error: { color: '#b91c1c', marginBottom: 6, fontSize: 13 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  loadingRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginVertical: 6 },
+  loadingText: { marginLeft: 8, color: tokens.colors.textSecondary },
+  error: { color: tokens.colors.error, marginBottom: 6, fontSize: 13 },
+  inputRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   input: {
-    flex: 1, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 6,
+    flex: 1, borderWidth: 1, borderColor: tokens.colors.border, borderRadius: 6,
     paddingHorizontal: 10, paddingVertical: 8, fontSize: 14
   }
 });

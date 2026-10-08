@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, Button } from '../../design/ui';
 import { tokens } from '../../theme/tokens';
 
 export default function PageHeader({ title, subtitle, actionTitle, onAction }) {
@@ -25,7 +26,7 @@ const styles = StyleSheet.create({
     marginBottom: tokens.spacing.lg
   },
   title: {
-    fontSize: tokens.typography.sizes.xl,
+    fontSize: tokens.typography.sizes.display,
     fontWeight: '700',
     color: tokens.colors.text
   },
