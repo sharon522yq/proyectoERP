@@ -6,6 +6,8 @@ for (const file of ['dist/index.html', 'dist/_headers', 'wrangler.jsonc']) {
 }
 const wrangler = JSON.parse(fs.readFileSync(path.join(root, 'wrangler.jsonc'), 'utf8'));
 if (wrangler.assets?.not_found_handling !== 'single-page-application') throw new Error('Cloudflare SPA routing is required');
+if (!wrangler.previews || typeof wrangler.previews !== 'object' || Array.isArray(wrangler.previews)) throw new Error('Cloudflare previews configuration is required');
+if (wrangler.build?.command !== 'npm run export:web && npm run verify:web') throw new Error('Cloudflare must build and verify fresh web assets');
 for (const file of ['public/_redirects', 'dist/_redirects']) {
   if (fs.existsSync(path.join(root, file))) throw new Error('Legacy SPA redirects conflict with Workers routing: ' + file);
 }

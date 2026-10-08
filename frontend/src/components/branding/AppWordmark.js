@@ -17,11 +17,12 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: tokens.spacing.xs
+    gap: tokens.spacing.xs,
+    backgroundColor: '#f8fafc', padding: 8, borderRadius: 12, alignSelf: 'flex-start'
   },
   title: {
     fontWeight: '700',
-    color: tokens.colors.text,
+    color: '#0f172a',
     letterSpacing: -0.5
   }
 });

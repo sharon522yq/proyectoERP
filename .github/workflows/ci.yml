@@ -35,11 +35,18 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
+      - name: Lint shared frontend
+        run: npm --prefix frontend run lint
+
       - name: Export Expo web app
         working-directory: frontend
         run: npm run export:web
 
-      - name: Test Workers SPA export validation
+      - name: Export Android JavaScript and assets
+        working-directory: frontend
+        run: npx expo export --platform android --output-dir dist-android --clear
+
+      - name: Test frontend components and Workers SPA export validation
         run: node --test frontend/scripts/*.test.js
 
       - name: Validate Cloudflare deployment inputs

@@ -1,6 +1,7 @@
 import { operationError } from '../../services/operationError';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, ScrollView, StyleSheet, Button } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, TextInput, ScrollView, Button } from '../../design/ui';
 import { purchasesApi, crmApi, productsApi, inventoryApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { tokens } from '../../theme/tokens';

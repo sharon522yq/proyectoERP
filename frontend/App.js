@@ -1,5 +1,7 @@
 import { registerRootComponent } from 'expo';
 import React from 'react';
+import DesignProvider from './src/design/DesignProvider';
+import { tokens } from './src/theme/tokens';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth, AuthProvider } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
@@ -16,11 +18,11 @@ function Root() {
 
 export default function App() {
   return (
-    <View style={styles.container}>
+    <DesignProvider><View style={styles.container}>
       <AuthProvider>
         <Root />
       </AuthProvider>
-    </View>
+    </View></DesignProvider>
   );
 }
 
@@ -29,7 +31,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     width: '100%',
-    backgroundColor: '#f8fafc'
+    backgroundColor: tokens.colors.background
   }
 });
 

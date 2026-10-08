@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, TextInput, Button } from '../design/ui';
 import { tokens } from '../theme/tokens';
 export default function RecordEditor({ title, fields, values, onChange, onSave, onCancel, busy, error }) {
   return <View style={styles.card}>

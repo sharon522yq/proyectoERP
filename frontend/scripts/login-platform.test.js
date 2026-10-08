@@ -15,14 +15,14 @@ function renderLogin(platform, windowValue) {
   const react = {
     createElement: (type, props, ...children) => ({ type, props, children }),
     useState: initial => { states.push(initial); return [initial, () => {}]; },
-    useRef: () => ({ current: null })
+    useRef: () => ({ current: null }), useEffect: () => {}
   };
   const context = {
     exports: {}, window: windowValue,
     require: name => {
       if (name === 'react') return react;
-      if (name === 'react-native') return {
-        Platform: { OS: platform }, StyleSheet: { create: value => value }
+      if ((name === 'react-native' || name.endsWith('/design/ui'))) return {
+        Platform: { OS: platform }, useWindowDimensions: () => ({ width: 390 }), BackHandler: { addEventListener: () => ({ remove() {} }) }, StyleSheet: { create: value => value }
       };
       if (name.includes('AuthContext')) return { useAuth: () => ({}) };
       if (name.includes('theme/tokens')) return { tokens: {

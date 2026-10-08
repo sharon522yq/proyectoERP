@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text } from '../../design/ui';
 import { useAuth } from '../../context/AuthContext';
 import { tokens } from '../../theme/tokens';
 

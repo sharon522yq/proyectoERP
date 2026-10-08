@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, Button } from '../../design/ui';
 import { tokens } from '../../theme/tokens';
 
 export default function EmptyState({ title = 'No hay registros', description, actionTitle, onAction }) {

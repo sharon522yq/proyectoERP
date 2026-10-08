@@ -25,3 +25,6 @@ Thumbs.db
 
 /frontend/android
 /frontend/ios
+
+# Android Metro export artifacts
+dist-android/

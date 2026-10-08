@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, ScrollView } from '../design/ui';
 import { useAuth } from '../context/AuthContext';
 import { dashboardApi } from '../services/api';
 import { MENU_BY_PERMISSION } from '../constants/config';

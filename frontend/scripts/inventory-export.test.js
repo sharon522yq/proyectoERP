@@ -30,7 +30,7 @@ const componentCode = babel.transformSync(fs.readFileSync(componentFile, 'utf8')
 function harness(permissions, api) {
   let index = 0; const slots = [];
   const react = { createElement: (type, props, ...children) => ({ type, props, children }), useState: initial => { const n = index++; if (!(n in slots)) slots[n] = initial; return [slots[n], v => slots[n] = v]; }, useRef: initial => { const n = index++; if (!(n in slots)) slots[n] = { current: initial }; return slots[n]; } };
-  const env = { exports: {}, require: name => name === 'react' ? react : name === 'react-native' ? { View: 'View', Text: 'Text', TouchableOpacity: 'Button', Platform: { OS: 'web' } } : name.includes('AuthContext') ? { useAuth: () => ({ has: p => permissions.includes(p) }) } : name.includes('saveInventoryExcel') ? { saveInventoryExcel: async () => 'Descarga iniciada' } : { inventoryApi: { exportExcel: api } } };
+  const env = { exports: {}, require: name => name === 'react' ? react : (name === 'react-native' || name.endsWith('/design/ui')) ? { View: 'View', Text: 'Text', TouchableOpacity: 'Button', Platform: { OS: 'web' } } : name.includes('theme/tokens') ? {tokens:{colors:{primary:'purple',error:'red',success:'green'}}} : name.includes('AuthContext') ? { useAuth: () => ({ has: p => permissions.includes(p) }) } : name.includes('saveInventoryExcel') ? { saveInventoryExcel: async () => 'Descarga iniciada' } : { inventoryApi: { exportExcel: api } } };
   vm.runInNewContext(componentCode, env);
   const render = () => { index = 0; return env.exports.default({}); };
   function nodes(tree) { return !tree ? [] : [tree, ...(tree.children || []).flat(Infinity).filter(n => n && typeof n === 'object').flatMap(nodes)]; }

@@ -1,6 +1,8 @@
+import { formatProductPrice } from '../../services/formatProductPrice';
 import { operationError } from '../../services/operationError';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Button, Modal } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, TextInput, TouchableOpacity, ScrollView, Button, Modal } from '../../design/ui';
 import CatalogActions from '../../components/CatalogActions';
 import { useAuth } from '../../context/AuthContext';
 import { productsApi } from '../../services/api';
@@ -9,6 +11,7 @@ import PageHeader from '../../components/layout/PageHeader';
 import LoadingSkeleton from '../../components/data-display/LoadingSkeleton';
 import ErrorState from '../../components/data-display/ErrorState';
 import EmptyState from '../../components/data-display/EmptyState';
+import DataTable from '../../components/data-display/DataTable';
 import StatusBadge from '../../components/data-display/StatusBadge';
 
 export default function ProductsScreen({ onBack }) {
@@ -45,7 +48,7 @@ export default function ProductsScreen({ onBack }) {
       setProducts(data.items || data || []); setTotal(data.total || 0);
     } catch (err) {
       if (version !== requestVersion.current) return;
-      setError(err.message || 'Error al cargar productos');
+      setError(err.response?.data?.message || 'Error al cargar productos');
     } finally {
       if (version === requestVersion.current) setLoading(false);
     }
@@ -103,38 +106,34 @@ export default function ProductsScreen({ onBack }) {
       ) : error ? (
         <ErrorState message={error} onRetry={loadProducts} />
       ) : products.length === 0 ? (
-        <EmptyState title="No hay productos" description="Crea tu primer producto para comenzar." actionTitle="Crear Producto" onAction={() => setModalVisible(true)} />
+        <EmptyState title="No hay productos" description="Crea tu primer producto para comenzar." actionTitle={has('products.create') ? 'Crear Producto' : undefined} onAction={() => setModalVisible(true)} />
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
-          {products.map((p) => (
-            <View key={p._id || p.sku} style={[styles.itemCard, tokens.shadows.sm]}>
-              <View>
-                <Text style={styles.itemName}>{p.name}</Text>
-                <Text style={styles.itemSku}>SKU: {p.sku}</Text>
-              </View>
-              <View style={styles.itemRight}>
-                <Text style={styles.itemPrice}>${p.price}</Text>
-                <StatusBadge status={p.status || 'ACTIVE'} />
-                {has('products.update') && <Button title={'Editar ' + p.name} onPress={() => openForm(p)} />}
-                <CatalogActions name={p.name} active={p.status === 'ACTIVE'} onDelete={has('products.delete') ? () => productsApi.deleteProduct(p._id) : undefined} onToggle={has('products.update') ? () => productsApi.updateProduct(p._id, { status: p.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }) : undefined} onChanged={loadProducts} explanation="El producto se retirará del catálogo si no tiene dependencias. Si tiene existencias o documentos relacionados, podrás desactivarlo." />
-              </View>
-            </View>
-          ))}
+          <DataTable label="Catálogo de productos" rows={products} keyFor={p => p._id || p.sku} columns={[{ key: 'identity', label: 'Producto y SKU', flex: 2 }, { key: 'price', label: 'Precio de venta', numeric: true }, { key: 'status', label: 'Estado' }, { key: 'actions', label: 'Gestión', flex: 2 }]} renderCell={(p, column) => {
+            if (column === 'identity') return <View><Text style={styles.itemName}>{p.name}</Text><Text style={styles.itemSku}>SKU: {p.sku}</Text></View>;
+            if (column === 'price') return <Text style={{ fontWeight: '600', color: tokens.colors.blueAccent }}>{formatProductPrice(p.price, p.currency)}</Text>;
+            if (column === 'status') return <StatusBadge status={p.status || 'ACTIVE'} />;
+            return <View style={{ gap: 8 }}>{has('products.update') && <Button title={'Editar ' + p.name} variant="secondary" onPress={() => openForm(p)} />}<CatalogActions name={p.name} active={p.status === 'ACTIVE'} onDelete={has('products.delete') ? () => productsApi.deleteProduct(p._id) : undefined} onToggle={has('products.update') ? () => productsApi.updateProduct(p._id, { status: p.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }) : undefined} onChanged={loadProducts} explanation="El producto se retirará del catálogo si no tiene dependencias. Si tiene existencias o documentos relacionados, podrás desactivarlo." /></View>;
+          }} />
         </ScrollView>
       )}
 
       <View style={styles.toolbar}><Button title="Anterior" disabled={loading || page === 1} onPress={() => setPage(page - 1)} /><Text>Página {page}</Text><Button title="Siguiente" disabled={loading || page * 20 >= total} onPress={() => setPage(page + 1)} /></View>
-      <Modal visible={modalVisible} animationType="slide" transparent>
+      <Modal onRequestClose={() => { if (!saving) setModalVisible(false); }} visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, tokens.shadows.lg]}>
             <Text style={styles.modalTitle}>{editing ? 'Editar producto' : 'Crear Nuevo Producto'}</Text>
+            <Text style={{ fontWeight: '600' }}>Nombre del producto (obligatorio)</Text>
             <TextInput editable={!saving} style={styles.input} accessibilityLabel="Nombre del producto" placeholder="Nombre del producto" value={name} onChangeText={setName} />
+            <Text style={{ fontWeight: '600' }}>SKU del producto (obligatorio)</Text>
             <TextInput editable={!saving} style={styles.input} accessibilityLabel="SKU del producto" placeholder="SKU (ej. PROD-001)" value={sku} onChangeText={setSku} />
+            <Text style={{ fontWeight: '600' }}>Precio de venta (obligatorio)</Text>
             <TextInput editable={!saving} style={styles.input} accessibilityLabel="Precio de venta" placeholder="Precio de venta ($)" value={price} onChangeText={setPrice} keyboardType="numeric" />
+            <Text style={{ fontWeight: '600' }}>Costo del producto (opcional)</Text>
             <TextInput editable={!saving} style={styles.input} accessibilityLabel="Costo del producto" placeholder="Costo ($)" value={cost} onChangeText={setCost} keyboardType="numeric" />
             {!!formError && <Text style={styles.error}>{formError}</Text>}
             <View style={styles.modalActions}>
-              <Button title="Cancelar" disabled={saving} color="#64748b" onPress={() => setModalVisible(false)} />
+              <Button title="Cancelar" disabled={saving} color={tokens.colors.surfaceHover} onPress={() => setModalVisible(false)} />
               <Button title={saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Guardar Producto'} disabled={saving} onPress={handleCreate} />
             </View>
           </View>
@@ -159,5 +158,5 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: tokens.typography.sizes.lg, fontWeight: '700', color: tokens.colors.text },
   input: { borderWidth: 1, borderColor: tokens.colors.border, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.sm, backgroundColor: tokens.colors.surfaceVariant },
   error: { color: tokens.colors.error, fontSize: tokens.typography.sizes.sm },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: tokens.spacing.md, marginTop: tokens.spacing.sm }
+  modalActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: tokens.spacing.md, marginTop: tokens.spacing.sm }
 });

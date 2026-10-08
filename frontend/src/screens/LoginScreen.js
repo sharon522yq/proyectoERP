@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Platform } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, StyleSheet, ActivityIndicator, Platform, useWindowDimensions, KeyboardAvoidingView, BackHandler } from 'react-native';
+import { Text, TextInput, TouchableOpacity, ScrollView, Button } from '../design/ui';
 import { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { tokens } from '../theme/tokens';
+import LoginArtwork from '../components/branding/LoginArtwork';
 import AppWordmark from '../components/branding/AppWordmark';
 
 export default function LoginScreen() {
@@ -21,6 +23,9 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const wide = useWindowDimensions().width >= 1024;
+  const [showPassword, setShowPassword] = useState(false);
+  useEffect(() => { const subscription = BackHandler.addEventListener('hardwareBackPress', () => { if (mode !== 'login') { switchMode('login'); return true; } return false; }); return () => subscription.remove(); }, [mode]);
   const submit = async () => {
     if (loading) return;
     const email = typeof emailInput.current?.value === 'string' ? emailInput.current.value : emailState;
@@ -59,15 +64,15 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={[styles.card, tokens.shadows.md]}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}><ScrollView contentContainerStyle={[styles.container, { padding: wide ? 40 : 16 }]} keyboardShouldPersistTaps="handled"><View style={[styles.composition, wide && { flexDirection: 'row' }]}>
+      <View style={[styles.card, { width: wide ? '44%' : '100%', padding: wide ? 40 : 24 }]}>
         <View style={styles.brandHeader}>
           <AppWordmark size={48} />
           <Text style={styles.subtitle}>Sistema de Planificación de Recursos Empresariales</Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>{({ login: 'Iniciar sesión', register: 'Crear cuenta', forgot: 'Recuperar contraseña', reset: 'Restablecer contraseña' })[mode]}</Text>
+          <Text style={[styles.label, { fontSize: 28, lineHeight: 36 }]}>{({ login: 'Iniciar sesión', register: 'Crear cuenta', forgot: 'Recuperar contraseña', reset: 'Restablecer contraseña' })[mode]}</Text>
           {['register'].includes(mode) && <View style={styles.inputGroup}>
             <Text style={styles.label}>Nombre completo</Text>
             <TextInput style={styles.input} value={name} onChangeText={setName} maxLength={120} editable={!loading} />
@@ -104,11 +109,12 @@ export default function LoginScreen() {
               placeholder="••••••••"
               value={passwordState}
               onChangeText={setPassword}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               editable={!loading}
               onSubmitEditing={submit}
             />
           </View>}
+          {mode !== 'forgot' && <TouchableOpacity accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} onPress={() => setShowPassword(!showPassword)}><Text style={{ color: tokens.colors.blueAccent }}>{showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}</Text></TouchableOpacity>}
           {['register', 'reset'].includes(mode) && <View style={styles.inputGroup}>
             <Text style={styles.label}>Confirmar contraseña</Text>
             <TextInput style={styles.input} value={confirmation} onChangeText={setConfirmation} secureTextEntry editable={!loading} onSubmitEditing={submit} />
@@ -116,17 +122,16 @@ export default function LoginScreen() {
           {!!message && <Text accessibilityRole="alert" style={styles.label}>{message}</Text>}
           {!!error && <Text style={styles.error}>{error}</Text>}
 
-          <TouchableOpacity accessibilityRole="button" style={[styles.button, loading && styles.buttonDisabled]} onPress={submit} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{({ login: 'Iniciar sesión', register: 'Crear cuenta', forgot: 'Enviar enlace', reset: 'Guardar contraseña' })[mode]}</Text>}
-          </TouchableOpacity>
+          <Button title={({ login: 'Iniciar sesión', register: 'Crear cuenta', forgot: 'Enviar enlace', reset: 'Guardar contraseña' })[mode]} loading={loading} disabled={loading} onPress={submit} />
           {(mode === 'login' ? [['register', 'Crear cuenta'], ['forgot', '¿Olvidaste tu contraseña?']] : [['login', 'Volver a iniciar sesión'], ...(mode === 'forgot' ? [['reset', 'Ya tengo un código de recuperación']] : [])]).map(([next, label]) => (
             <TouchableOpacity key={next} onPress={() => switchMode(next)} disabled={loading} accessibilityRole="button">
-              <Text style={[styles.label, { color: tokens.colors.primary, textAlign: 'center' }]}>{label}</Text>
+              <Text style={[styles.label, { color: tokens.colors.blueAccent, textAlign: 'center' }]}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
-    </ScrollView>
+      {wide && <LoginArtwork />}
+      </View></ScrollView></KeyboardAvoidingView>
   );
 }
 
@@ -138,14 +143,14 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.background,
     padding: tokens.spacing.md
   },
+  composition: { width: '100%', maxWidth: 1120, borderRadius: 24, overflow: 'hidden', backgroundColor: tokens.colors.surface, borderWidth: 1, borderColor: tokens.colors.border, ...tokens.shadows.md },
   card: {
     backgroundColor: tokens.colors.surface,
-    borderRadius: tokens.borderRadius.lg,
+    borderRadius: 0,
     padding: tokens.spacing.xl,
     width: '100%',
-    maxWidth: 420,
-    borderWidth: 1,
-    borderColor: tokens.colors.border
+    maxWidth: 520,
+    justifyContent: 'center'
   },
   brandHeader: {
     alignItems: 'center',

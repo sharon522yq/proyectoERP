@@ -12,3 +12,6 @@ build/
 Thumbs.db
 .idea/
 .vscode/
+
+# Android Metro export artifacts
+dist-android/

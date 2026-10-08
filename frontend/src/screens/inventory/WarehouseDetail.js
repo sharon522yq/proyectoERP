@@ -1,5 +1,7 @@
+import { tokens } from '../../theme/tokens';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Button, ScrollView } from 'react-native';
+import { View } from 'react-native';
+import { Text, TextInput, Button, ScrollView } from '../../design/ui';
 import { inventoryApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import CatalogActions from '../../components/CatalogActions';
@@ -42,13 +44,13 @@ export default function WarehouseDetail({ warehouse, products, onBack, onChanged
     finally { running.current = false; setSaving(false); }
   };
   const productName = id => products.find(p => p._id === id)?.name || id;
-  const pager = (page, total, change) => <View style={{ flexDirection: 'row', gap: 12 }}><Button title="Anterior" disabled={loading || page <= 1} onPress={() => change(page - 1)} /><Text>Página {page}</Text><Button title="Siguiente" disabled={loading || page * 20 >= total} onPress={() => change(page + 1)} /></View>;
+  const pager = (page, total, change) => <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}><Button title="Anterior" disabled={loading || page <= 1} onPress={() => change(page - 1)} /><Text>Página {page}</Text><Button title="Siguiente" disabled={loading || page * 20 >= total} onPress={() => change(page + 1)} /></View>;
   return <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
     <Text style={{ fontSize: 24, fontWeight: '700' }}>Almacén: {record.name}</Text>
     <Text>Estado: {record.active ? 'Activo' : 'Desactivado'}</Text>
     <InventoryExportButton warehouseId={record._id} />
     <Button title="Volver a inventario" disabled={saving} onPress={onBack} />
-    {!!error && <View><Text accessibilityRole="alert" style={{ color: '#b91c1c' }}>{error}</Text><Button title="Reintentar consulta" onPress={load} /></View>}
+    {!!error && <View><Text accessibilityRole="alert" style={{ color: tokens.colors.error }}>{error}</Text><Button title="Reintentar consulta" onPress={load} /></View>}
     {!!notice && <Text>{notice}</Text>}
     {has('branches.update') ? <View style={{ gap: 8 }}>
       <Text>Nombre</Text><TextInput accessibilityLabel="Nombre del almacén" value={name} onChangeText={setName} maxLength={150} editable={!saving} style={{ borderWidth: 1, padding: 10 }} />

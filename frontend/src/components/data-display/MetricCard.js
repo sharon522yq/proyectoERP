@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text } from '../../design/ui';
 import { tokens } from '../../theme/tokens';
 
 export default function MetricCard({ title, value, subtitle, color = tokens.colors.primary }) {
@@ -19,7 +20,7 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.md,
     borderWidth: 1,
     borderColor: tokens.colors.border,
-    minWidth: 200,
+    minWidth: 180, maxWidth: '100%',
     flex: 1
   },
   title: {
@@ -29,7 +30,7 @@ const styles = StyleSheet.create({
     fontWeight: '500'
   },
   value: {
-    fontSize: tokens.typography.sizes.xxl,
+    fontSize: tokens.typography.sizes.display,
     fontWeight: '700',
     marginBottom: tokens.spacing.xxs
   },

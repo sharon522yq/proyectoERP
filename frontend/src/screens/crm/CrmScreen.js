@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, ScrollView, StyleSheet, Button, Modal } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, TextInput, ScrollView, Button, Modal } from '../../design/ui';
 import CatalogActions from '../../components/CatalogActions';
 import { useAuth } from '../../context/AuthContext';
 import { crmApi } from '../../services/api';
@@ -100,8 +101,8 @@ export default function CrmScreen({ onBack }) {
       />
 
       <View style={styles.toolbar}>
-        {has('crm.leads.read') && <Button title="Prospectos" disabled={saving} onPress={() => { setTab('leads'); setPage(1); }} />}
-        {has('crm.customers.read') && <Button title="Clientes y proveedores" disabled={saving} onPress={() => { setTab('customers'); setPage(1); }} />}
+        {has('crm.leads.read') && <Button title="Prospectos" variant={tab === 'leads' ? 'primary' : 'secondary'} disabled={saving} onPress={() => { setTab('leads'); setPage(1); }} />}
+        {has('crm.customers.read') && <Button title="Clientes y proveedores" variant={tab === 'customers' ? 'primary' : 'secondary'} disabled={saving} onPress={() => { setTab('customers'); setPage(1); }} />}
         <TextInput style={styles.search} accessibilityLabel="Buscar en CRM" placeholder="Buscar por nombre…" value={search} onChangeText={value => { setSearch(value); setPage(1); }} />
         {onBack ? <Button title="Volver" onPress={onBack} /> : null}
       </View>
@@ -134,16 +135,19 @@ export default function CrmScreen({ onBack }) {
       )}
 
       <View style={styles.toolbar}><Button title="Anterior" disabled={loading || page === 1} onPress={() => setPage(page - 1)} /><Text>Página {page}</Text><Button title="Siguiente" disabled={loading || page * 20 >= total} onPress={() => setPage(page + 1)} /></View>
-      <Modal visible={modalVisible} animationType="slide" transparent>
+      <Modal onRequestClose={() => { if (!saving) setModalVisible(false); }} visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, tokens.shadows.lg]}>
             <Text style={styles.modalTitle}>{editing ? 'Editar registro' : tab === 'leads' ? 'Crear Nuevo Lead' : 'Nuevo cliente / proveedor'}</Text>
+            <Text style={{ fontWeight: '600' }}>Nombre completo (obligatorio)</Text>
             <TextInput style={styles.input} ref={nameInput} accessibilityLabel={tab === 'leads' ? 'Nombre del lead' : 'Nombre del cliente o proveedor'} maxLength={150} editable={!saving} placeholder="Nombre completo" value={name} onChangeText={setName} />
+            <Text style={{ fontWeight: '600' }}>Correo electrónico (opcional)</Text>
             <TextInput style={styles.input} ref={emailInput} accessibilityLabel={tab === 'leads' ? 'Correo del lead' : 'Correo del cliente o proveedor'} keyboardType="email-address" autoComplete="email" editable={!saving} placeholder="Correo electrónico (opcional)" value={email} onChangeText={setEmail} autoCapitalize="none" />
+            <Text style={{ fontWeight: '600' }}>Teléfono (opcional)</Text>
             <TextInput style={styles.input} ref={phoneInput} accessibilityLabel={tab === 'leads' ? 'Teléfono del lead' : 'Teléfono del cliente o proveedor'} maxLength={30} editable={!saving} placeholder="Teléfono (opcional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             {!!formError && <Text style={styles.error}>{formError}</Text>}
             <View style={styles.modalActions}>
-              <Button title="Cancelar" disabled={saving} color="#64748b" onPress={() => setModalVisible(false)} />
+              <Button title="Cancelar" disabled={saving} color={tokens.colors.surfaceHover} onPress={() => setModalVisible(false)} />
               <Button title={editing ? 'Guardar cambios' : tab === 'leads' ? 'Guardar Lead' : 'Guardar cliente / proveedor'} disabled={saving} onPress={handleCreateLead} />
             </View>
           </View>
@@ -169,5 +173,5 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: tokens.typography.sizes.lg, fontWeight: '700', color: tokens.colors.text },
   input: { borderWidth: 1, borderColor: tokens.colors.border, borderRadius: tokens.borderRadius.md, padding: tokens.spacing.sm, backgroundColor: tokens.colors.surfaceVariant },
   error: { color: tokens.colors.error, fontSize: tokens.typography.sizes.sm },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: tokens.spacing.md, marginTop: tokens.spacing.sm }
+  modalActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: tokens.spacing.md, marginTop: tokens.spacing.sm }
 });
