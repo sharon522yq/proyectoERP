@@ -82,3 +82,9 @@ test('repeated exports are rate limited without anonymous file access', async ()
   expect((await get(admin)).status).toBe(200);
   const limited = await get(admin); expect(limited.status).toBe(429); expect(limited.body.code).toBe('EXPORT_RATE_LIMIT');
 });
+
+test('a transient snapshot failure retries the entire read and succeeds', async () => {
+  const error = Object.assign(new Error('Synthetic transient error'), { hasErrorLabel: label => label === 'TransientTransactionError' });
+  const spy = jest.spyOn(Company, 'findById').mockImplementationOnce(() => ({ session: () => ({ lean: async () => { throw error; } }) }));
+  try { const book = await workbook(await exportInventory(ctx(), {})); expect(book.getWorksheet('Inventario').rowCount).toBe(30); expect(spy).toHaveBeenCalledTimes(2); } finally { spy.mockRestore(); }
+});

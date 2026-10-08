@@ -109,4 +109,3 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
     delete process.env.INITIAL_SETUP_TOKEN;
   }
 })().catch(error => { console.error(/^[A-Za-z0-9_]+$/.test(error.message) ? error.message : 'BROWSER_QA_FAILED'); process.exitCode = 1; });
-

@@ -11,7 +11,7 @@ const MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const LIMIT = 10000;
 let running = 0;
 
-async function snapshot(companyId, warehouseId) {
+async function snapshotOnce(companyId, warehouseId) {
   const session = await mongoose.startSession();
   try {
     session.startTransaction({ readConcern: { level: 'snapshot' } });
@@ -30,6 +30,18 @@ async function snapshot(companyId, warehouseId) {
   } finally {
     if (session.inTransaction()) await session.abortTransaction();
     await session.endSession();
+  }
+}
+async function snapshot(companyId, warehouseId) {
+  // Index creation and concurrent writes may transiently abort a snapshot.
+  // Retake the entire snapshot, never mix rows from separate attempts.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await snapshotOnce(companyId, warehouseId); }
+    catch (error) {
+      if (!error.hasErrorLabel?.('TransientTransactionError')) throw error;
+      if (attempt === 2) throw new ApiError(503, 'El inventario está ocupado. Intenta exportar nuevamente en unos momentos.', 'EXPORT_RETRY');
+      await new Promise(resolve => setTimeout(resolve, 250 * (attempt + 1)));
+    }
   }
 }
 function sheet(book, name, title, headers, widths) {
