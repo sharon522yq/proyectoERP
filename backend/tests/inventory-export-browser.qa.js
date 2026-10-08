@@ -57,7 +57,7 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
       } catch { transportFailure = true; await send('Fetch.failRequest', { requestId, errorReason: 'Failed' }); }
     });
     const evaluate = async expression => {
-      const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+      const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture: true });
       if (result.result?.exceptionDetails) throw new Error('BROWSER_EVALUATION_FAILED');
       return result.result?.result?.value;
     };
@@ -84,14 +84,13 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
     await wait("document.body.textContent.includes('Bienvenido, Synthetic Owner')", 'login_dashboard');
     const authenticatedRequestStart = requests.length;
     const visible = text => 'document.body.textContent.includes(' + JSON.stringify(text) + ')';
-    const downloads = [];
-    const downloadPath = 'C:/proyectoERP/.local/inventory-export-browser'; fs.mkdirSync(downloadPath, { recursive: true });
-    ws.addEventListener('message', event => { const m = JSON.parse(event.data); if (m.method === 'Browser.downloadWillBegin') downloads.push({ guid: m.params.guid, filename: m.params.suggestedFilename }); });
-    await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath, eventsEnabled: true });
+        const downloadPath = path.resolve('C:/proyectoERP/.local/inventory-export-browser'); fs.mkdirSync(downloadPath, { recursive: true });
+    const policy = await send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath }); if (policy.error) throw new Error('DOWNLOAD_POLICY_FAILED');
     await require('../src/modules/inventory/inventory.model').create({ companyId: company._id, productId: product._id, warehouseId: warehouse._id, quantity: 12, reservedQty: 3 });
     await click('Inventario'); await wait(visible('Exportar inventario a Excel'), 'export_button_visible');
+    const previousFiles = new Set(fs.readdirSync(downloadPath)); const completedFiles = [];
+    const waitFile = async count => { for (let i = 0; i < 60; i++) { const files = fs.readdirSync(downloadPath).filter(f => f.endsWith('.xlsx') && !previousFiles.has(f)); for (const f of files) if (!completedFiles.includes(f)) completedFiles.push(f); if (completedFiles.length >= count) return path.join(downloadPath, completedFiles[count - 1]); await pause(500); } throw new Error('DOWNLOAD_MISSING'); };
     await click('Exportar inventario a Excel'); await wait(visible('Descarga iniciada'), 'download_started');
-    const waitFile = async count => { for (let i = 0; i < 60; i++) { if (downloads.length >= count && fs.existsSync(path.join(downloadPath, downloads[count - 1].filename))) return path.join(downloadPath, downloads[count - 1].filename); await pause(500); } throw new Error('DOWNLOAD_MISSING'); };
     const file = await waitFile(1); const book = new (require('exceljs').Workbook)(); await book.xlsx.readFile(file);
     if (book.getWorksheet('Inventario').getCell('H5').value !== 12 || book.getWorksheet('Inventario').getCell('J5').value !== 9) throw new Error('WORKBOOK_VALUES_INVALID'); steps.push('actual_xlsx_download_verified');
     await click('Gestionar: Almacén QA (QA)'); await wait(visible('Exportar este almacén a Excel'), 'warehouse_export_visible');
@@ -100,7 +99,7 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
     if (exportRequests.filter(r => r.method === 'GET' && r.status === 200).length !== 2 || transportFailure) throw new Error('EXPORT_HTTP_INVALID');
     fs.writeFileSync(path.join(downloadPath, 'evidence.json'), JSON.stringify({ environment: 'isolated temporary MongoDB; Render transport intercepted; no production test', steps, requests: exportRequests }, null, 2));
     const shot = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(downloadPath, 'export.png'), Buffer.from(shot.result.data, 'base64'));
-    console.log(JSON.stringify({ passed: steps, downloads: downloads.map(d => d.filename) }));
+    console.log(JSON.stringify({ passed: steps, downloads: completedFiles }));
   } catch (error) { console.error('QA_STAGE', stage, error.code || error.cause?.code || 'UNEXPECTED_ERROR'); throw error; } finally {
     if (ws) ws.close();
     if (webServer) { webServer.closeAllConnections(); await new Promise(r => webServer.close(r)); }
