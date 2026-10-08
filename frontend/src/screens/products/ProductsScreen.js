@@ -1,3 +1,4 @@
+import { formatProductPrice } from '../../services/formatProductPrice';
 import { operationError } from '../../services/operationError';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
@@ -110,7 +111,7 @@ export default function ProductsScreen({ onBack }) {
         <ScrollView contentContainerStyle={styles.list}>
           <DataTable label="Catálogo de productos" rows={products} keyFor={p => p._id || p.sku} columns={[{ key: 'identity', label: 'Producto y SKU', flex: 2 }, { key: 'price', label: 'Precio de venta', numeric: true }, { key: 'status', label: 'Estado' }, { key: 'actions', label: 'Gestión', flex: 2 }]} renderCell={(p, column) => {
             if (column === 'identity') return <View><Text style={styles.itemName}>{p.name}</Text><Text style={styles.itemSku}>SKU: {p.sku}</Text></View>;
-            if (column === 'price') return <Text style={{ fontWeight: '600', color: tokens.colors.blueAccent }}>{new Intl.NumberFormat('es-MX', { style: 'currency', currency: p.currency || 'MXN' }).format(p.price)} {p.currency || 'MXN'}</Text>;
+            if (column === 'price') return <Text style={{ fontWeight: '600', color: tokens.colors.blueAccent }}>{formatProductPrice(p.price, p.currency)}</Text>;
             if (column === 'status') return <StatusBadge status={p.status || 'ACTIVE'} />;
             return <View style={{ gap: 8 }}>{has('products.update') && <Button title={'Editar ' + p.name} variant="secondary" onPress={() => openForm(p)} />}<CatalogActions name={p.name} active={p.status === 'ACTIVE'} onDelete={has('products.delete') ? () => productsApi.deleteProduct(p._id) : undefined} onToggle={has('products.update') ? () => productsApi.updateProduct(p._id, { status: p.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }) : undefined} onChanged={loadProducts} explanation="El producto se retirará del catálogo si no tiene dependencias. Si tiene existencias o documentos relacionados, podrás desactivarlo." /></View>;
           }} />
