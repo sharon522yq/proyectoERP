@@ -7,6 +7,10 @@ const ctrl = require('./inventory.controller');
 const router = Router();
 router.use(authenticate, scopeCompany);
 
+// An authenticated export includes catalog prices and costs; both read permissions are required.
+const exportLimit = require('express-rate-limit')({ windowMs: 60000, max: 3, keyGenerator: req => req.user.id, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Espera un minuto antes de exportar nuevamente.', code: 'EXPORT_RATE_LIMIT' } });
+router.get('/export.xlsx', requirePermission('inventory.read'), requirePermission('products.read'), v.exportQuery, validate, exportLimit, ctrl.exportInventory);
+
 // Warehouses
 router.get('/warehouses', requirePermission('inventory.read'), ctrl.listWarehouses);
 router.post('/warehouses', requirePermission('branches.create'), v.createWarehouse, validate, ctrl.createWarehouse);

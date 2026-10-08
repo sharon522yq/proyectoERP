@@ -3,6 +3,7 @@ import { View, Text, TextInput, Button, ScrollView } from 'react-native';
 import { inventoryApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import CatalogActions from '../../components/CatalogActions';
+import InventoryExportButton from '../../components/InventoryExportButton';
 export default function WarehouseDetail({ warehouse, products, onBack, onChanged, onAdjust }) {
   const { has } = useAuth();
   const [record, setRecord] = useState(warehouse);
@@ -45,6 +46,7 @@ export default function WarehouseDetail({ warehouse, products, onBack, onChanged
   return <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
     <Text style={{ fontSize: 24, fontWeight: '700' }}>Almacén: {record.name}</Text>
     <Text>Estado: {record.active ? 'Activo' : 'Desactivado'}</Text>
+    <InventoryExportButton warehouseId={record._id} />
     <Button title="Volver a inventario" disabled={saving} onPress={onBack} />
     {!!error && <View><Text accessibilityRole="alert" style={{ color: '#b91c1c' }}>{error}</Text><Button title="Reintentar consulta" onPress={load} /></View>}
     {!!notice && <Text>{notice}</Text>}

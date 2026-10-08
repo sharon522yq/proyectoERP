@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Button, Modal } from 'react-native';
 import WarehouseDetail from './WarehouseDetail';
+import InventoryExportButton from '../../components/InventoryExportButton';
 import { inventoryApi, productsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { tokens } from '../../theme/tokens';
@@ -105,6 +106,7 @@ export default function InventoryScreen({ onBack }) {
       <Text>Almacenes</Text>
       <ScrollView style={{ maxHeight: 170 }}>{warehouses.map(w => <Button key={w._id} title={'Gestionar: ' + w.name + ' (' + w.code + ')' + (w.active ? '' : ' · Desactivado')} onPress={() => setSelectedWarehouse(w)} />)}</ScrollView>
       {!warehouses.length && <Text>Sin almacenes; crea uno antes de registrar existencias.</Text>}
+      <InventoryExportButton />
       <View style={styles.toolbar}>
         {onBack ? <Button title="Volver" onPress={onBack} /> : null}
       </View>

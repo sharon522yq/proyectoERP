@@ -147,6 +147,7 @@ export const productsApi = {
 };
 
 export const inventoryApi = {
+  exportExcel: (warehouseId) => api.get('/inventory/export.xlsx', { params: warehouseId ? { warehouseId } : {}, timeout: 60000 }).then(r => r.data.data),
   getWarehouses: () => api.get('/inventory/warehouses').then((r) => r.data.data),
   getWarehouse: (id) => api.get(`/inventory/warehouses/${id}`).then(r => r.data.data),
   createWarehouse: (data) => api.post('/inventory/warehouses', data).then((r) => r.data.data),
