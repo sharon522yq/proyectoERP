@@ -10,7 +10,7 @@ function fixture(t) {
   for (const dir of ['public','dist/_expo/static/js/web','src/constants']) fs.mkdirSync(path.join(root, dir), { recursive: true });
   fs.writeFileSync(path.join(root, 'dist/index.html'), '<html></html>');
   fs.writeFileSync(path.join(root, 'dist/_headers'), '/*\n  X-Content-Type-Options: nosniff');
-  fs.writeFileSync(path.join(root, 'wrangler.jsonc'), JSON.stringify({ assets: { not_found_handling: 'single-page-application' } }));
+  fs.writeFileSync(path.join(root, 'wrangler.jsonc'), JSON.stringify({ assets: { not_found_handling: 'single-page-application' }, previews: {}, build: { command: 'npm run export:web && npm run verify:web' } }));
   fs.writeFileSync(path.join(root, 'dist/_expo/static/js/web/app.js'), 'https://proyectoerp-api.onrender.com/api/v1');
   fs.writeFileSync(path.join(root, 'src/constants/config.js'), '');
   return root;
@@ -27,4 +27,13 @@ test('rejects an export without the native SPA routing fallback', t => {
   const root = fixture(t);
   fs.writeFileSync(path.join(root, 'wrangler.jsonc'), JSON.stringify({ assets: {} }));
   assert.throws(() => verifyWebExport(root), /Cloudflare SPA routing is required/);
+});
+
+for (const [key, message] of [['previews', /previews configuration is required/], ['build', /must build and verify fresh web assets/]]) test('rejects deployment configuration missing ' + key, t => {
+  const root = fixture(t);
+  const file = path.join(root, 'wrangler.jsonc');
+  const config = JSON.parse(fs.readFileSync(file, 'utf8'));
+  delete config[key];
+  fs.writeFileSync(file, JSON.stringify(config));
+  assert.throws(() => verifyWebExport(root), message);
 });
