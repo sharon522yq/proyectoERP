@@ -11,7 +11,7 @@ export const MENU_BY_PERMISSION = [
   { label: 'CRM', route: 'crm', permission: 'crm.leads.read', icon: 'users' },
   { label: 'Productos', route: 'products', permission: 'products.read', icon: 'box' },
   { label: 'Inventario', route: 'inventory', permission: 'inventory.read', icon: 'warehouse' },
-  { label: 'Ventas', route: 'sales', permission: 'sales.quotes.read', icon: 'shopping-cart' },
+  { label: 'Ventas', route: 'sales', anyPermissions: ['sales.quotes.read', 'sales.orders.read', 'sales.invoices.read'], icon: 'shopping-cart' },
   { label: 'Compras', route: 'purchases', permission: 'purchases.read', icon: 'truck' },
   { label: 'Finanzas', route: 'finance', permission: 'finance.accounts.read', icon: 'dollar-sign' },
   { label: 'RRHH', route: 'hr', permission: 'hr.employees.read', icon: 'user-check' },
@@ -22,3 +22,5 @@ export const MENU_BY_PERMISSION = [
   { label: 'Auditoría', route: 'audit', permission: 'audit.read', icon: 'file-text' },
   { label: 'Asistente IA', route: 'ai', permission: 'ai.chat', icon: 'cpu' }
 ];
+
+export const canOpenMenu = (item, has) => item.anyPermissions ? item.anyPermissions.some(has) : !item.permission || has(item.permission);

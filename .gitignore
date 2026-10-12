@@ -15,3 +15,7 @@ Thumbs.db
 
 # Android Metro export artifacts
 dist-android/
+.local/
+.local-audit.json
+.backend-runtime-audit.json
+/runtime-audit.json

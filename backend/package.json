@@ -8,7 +8,16 @@
     "start": "node src/server.js",
     "test": "jest --runInBand --detectOpenHandles",
     "lint": "eslint src --ext .js",
-    "setup:owner": "node scripts/initialize-owner.js"
+    "setup:owner": "node scripts/initialize-owner.js",
+    "release:preflight": "node scripts/release-preflight.js",
+    "commercial:worker": "node scripts/commercial-worker.js",
+    "commercial:indexes": "node scripts/commercial-indexes.js",
+    "commercial:membership-backfill": "node scripts/commercial-membership-backfill.js",
+    "commercial:status": "node scripts/commercial-status.js",
+    "commercial:preview": "node scripts/commercial-preview.js",
+    "commercial:support": "node scripts/commercial-support.js",
+    "first-access:init": "node scripts/initialize-first-access.js",
+    "first-access:inspect": "node scripts/initialize-first-access.js --inspect"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

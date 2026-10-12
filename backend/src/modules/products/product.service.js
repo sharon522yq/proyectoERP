@@ -4,6 +4,17 @@ const { logAudit } = require('../../middlewares/audit');
 
 const ALLOWED = ['sku', 'name', 'description', 'categoryId', 'unitId', 'cost', 'price', 'currency', 'taxRate', 'minimumStock', 'maximumStock', 'status'];
 
+async function validateReferences(data, ctx) {
+  if (data.categoryId !== undefined) {
+    const category = await require('./category.model').findOne({ _id: data.categoryId, companyId: ctx.companyId, active: true, deletedAt: null });
+    if (!category) throw new ApiError(404, 'Categoría activa no encontrada en esta empresa', 'CATEGORY_NOT_FOUND');
+  }
+  // Las unidades son un catálogo global, no pertenecen a un tenant.
+  if (data.unitId !== undefined && !await require('./unit.model').exists({ _id: data.unitId })) {
+    throw new ApiError(404, 'Unidad de medida no encontrada', 'UNIT_NOT_FOUND');
+  }
+}
+
 function pick(obj, keys) {
   const r = {};
   for (const k of keys) if (obj[k] !== undefined) r[k] = obj[k];
@@ -13,6 +24,7 @@ function pick(obj, keys) {
 async function create(data, ctx) {
   const safe = pick(data, ALLOWED);
   safe.companyId = ctx.companyId;
+  await validateReferences(safe, ctx);
   if (!safe.sku) throw new ApiError(400, 'SKU es requerido', 'VALIDATION_ERROR');
   const existing = await repo.findBySku(ctx.companyId, safe.sku);
   if (existing) throw new ApiError(409, 'SKU ya existe en esta empresa', 'SKU_TAKEN');
@@ -33,6 +45,7 @@ async function update(id, data, ctx) {
   const prev = await repo.findById(id);
   if (!prev || String(prev.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Producto no encontrado', 'PRODUCT_NOT_FOUND');
   const safe = pick(data, ALLOWED);
+  await validateReferences(safe, ctx);
   if (safe.sku && safe.sku !== prev.sku) {
     const existing = await repo.findBySku(ctx.companyId, safe.sku);
     if (existing) throw new ApiError(409, 'SKU ya existe', 'SKU_TAKEN');

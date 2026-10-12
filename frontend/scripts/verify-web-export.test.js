@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { verifyWebExport } = require('./verify-web-export');
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'erp-cloudflare-'));
@@ -17,6 +18,14 @@ function fixture(t) {
 }
 test('valid Workers SPA export passes without Pages redirects', t => {
   assert.doesNotThrow(() => verifyWebExport(fixture(t)));
+});
+test('release manifest detects changed asset bytes', t => {
+  const root = fixture(t);
+  const hash = crypto.createHash('sha256').update('<html></html>').digest('hex');
+  fs.writeFileSync(path.join(root, 'dist/release.json'), JSON.stringify({ api: 'https://proyectoerp-api.onrender.com/api/v1', assets: { 'index.html': hash } }));
+  assert.doesNotThrow(() => verifyWebExport(root));
+  fs.writeFileSync(path.join(root, 'dist/index.html'), '<html>stale</html>');
+  assert.throws(() => verifyWebExport(root), /hash mismatch/);
 });
 for (const file of ['public/_redirects','dist/_redirects']) test('rejects loop-causing redirect file in ' + file, t => {
   const root = fixture(t);

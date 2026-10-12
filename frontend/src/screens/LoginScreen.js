@@ -7,7 +7,7 @@ import { tokens } from '../theme/tokens';
 import LoginArtwork from '../components/branding/LoginArtwork';
 import AppWordmark from '../components/branding/AppWordmark';
 
-export default function LoginScreen() {
+export default function LoginScreen({ onAbout } = {}) {
   const { login, register } = useAuth();
   const initialToken = Platform.OS === 'web' && typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search).get('resetToken') || '' : '';
   const [mode, setMode] = useState(initialToken ? 'reset' : 'login');
@@ -22,12 +22,17 @@ export default function LoginScreen() {
   const [passwordState, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
 
   const wide = useWindowDimensions().width >= 1024;
   const [showPassword, setShowPassword] = useState(false);
-  useEffect(() => { const subscription = BackHandler.addEventListener('hardwareBackPress', () => { if (mode !== 'login') { switchMode('login'); return true; } return false; }); return () => subscription.remove(); }, [mode]);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => { if (mode !== 'login') { switchMode('login'); return true; } return false; });
+    return () => subscription.remove();
+  }, [mode]);
   const submit = async () => {
-    if (loading) return;
+    if (submitting.current) return;
     const email = typeof emailInput.current?.value === 'string' ? emailInput.current.value : emailState;
     const password = typeof passwordInput.current?.value === 'string' ? passwordInput.current.value : passwordState;
     if (mode !== 'reset' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -40,6 +45,7 @@ export default function LoginScreen() {
     }
     if (mode === 'reset' && !token.trim()) { setError('Introduce el código del enlace de recuperación'); return; }
     try {
+      submitting.current = true;
       setError(''); setMessage(''); setLoading(true);
       if (mode === 'login') await login(email.trim(), password);
       else if (mode === 'register') {
@@ -57,8 +63,14 @@ export default function LoginScreen() {
         setMessage('Contraseña actualizada. Ya puedes iniciar sesión.');
       }
     } catch (err) {
-      setError((err.response && err.response.data && err.response.data.message) || 'No se pudo completar la solicitud. Revisa tu conexión e inténtalo de nuevo.');
+      const status = err.response?.status;
+      const explanation = status === 401 ? 'El correo o la contraseña no son correctos.' :
+        ['ECONNABORTED', 'ETIMEDOUT'].includes(err.code) ? 'El servidor está tardando en responder. Espera un momento e intenta nuevamente.' :
+        status >= 500 ? 'El servidor no pudo completar la solicitud. Intenta nuevamente.' :
+        err.response?.data?.message || 'No fue posible conectar con el servidor. Revisa tu conexión e intenta nuevamente.';
+      setError(explanation);
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };
@@ -120,7 +132,8 @@ export default function LoginScreen() {
             <TextInput style={styles.input} value={confirmation} onChangeText={setConfirmation} secureTextEntry editable={!loading} onSubmitEditing={submit} />
           </View>}
           {!!message && <Text accessibilityRole="alert" style={styles.label}>{message}</Text>}
-          {!!error && <Text style={styles.error}>{error}</Text>}
+          {loading && mode === 'login' && <Text accessibilityLiveRegion="polite" style={styles.label}>Conectando con el servidor… El primer acceso puede tardar hasta un minuto y medio.</Text>}
+          {!!error && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text>}
 
           <Button title={({ login: 'Iniciar sesión', register: 'Crear cuenta', forgot: 'Enviar enlace', reset: 'Guardar contraseña' })[mode]} loading={loading} disabled={loading} onPress={submit} />
           {(mode === 'login' ? [['register', 'Crear cuenta'], ['forgot', '¿Olvidaste tu contraseña?']] : [['login', 'Volver a iniciar sesión'], ...(mode === 'forgot' ? [['reset', 'Ya tengo un código de recuperación']] : [])]).map(([next, label]) => (
@@ -128,6 +141,7 @@ export default function LoginScreen() {
               <Text style={[styles.label, { color: tokens.colors.blueAccent, textAlign: 'center' }]}>{label}</Text>
             </TouchableOpacity>
           ))}
+          {onAbout && mode === 'login' && <TouchableOpacity onPress={onAbout} disabled={loading} accessibilityRole="button"><Text style={[styles.label, { color: tokens.colors.blueAccent, textAlign: 'center' }]}>Conocer NexusERP</Text></TouchableOpacity>}
         </View>
       </View>
       {wide && <LoginArtwork />}

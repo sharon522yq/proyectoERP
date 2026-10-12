@@ -1,0 +1,31 @@
+# Configuration template only: not deployed. Free service is suitable for evaluation,
+# not verified for commercial availability. Select paid hosting only with approval.
+services:
+  - type: web
+    name: proyectoerp-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm --prefix backend start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: COMMERCIAL_MODE
+        value: disabled
+      - key: ALLOW_PRIVILEGED_REGISTER
+        value: "false"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+# Required scheduled job: npm --prefix backend run commercial:worker every 5 minutes.
+# Add it only after choosing/authorizing a scheduler and configuring the same secrets.

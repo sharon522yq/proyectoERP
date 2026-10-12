@@ -44,6 +44,22 @@ function signRefresh(user) {
 
 async function register(data, ip) {
   const privileged = privilegedRegisterAllowed();
+  const commercialRegistration = !privileged && (data.companyName !== undefined || ['test', 'live'].includes(process.env.COMMERCIAL_MODE));
+  if (commercialRegistration) {
+    const { assertMailConfigured } = require('../commercial/mail');
+    assertMailConfigured();
+    const { catalog, checkoutConfig } = require('../commercial/catalog');
+    // Public sign-up creates a pending company owner. Do not create stranded
+    // accounts in hosted environments where the next activation step is disabled.
+    if (!['test', 'development'].includes(env.env)) checkoutConfig();
+    if (data.role !== undefined || data.companyId !== undefined || data.permissions !== undefined) {
+      throw new ApiError(400, 'El registro público no permite asignar privilegios', 'INVALID_REGISTER');
+    }
+    if (data.password !== data.confirmPassword || typeof data.companyName !== 'string' || data.companyName.trim().length < 2 ||
+        data.companyName.trim().length > 120 || data.acceptTerms !== true || data.termsVersion !== catalog().termsVersion) {
+      throw new ApiError(400, 'Confirma contraseña, empresa y versión de términos', 'INVALID_REGISTER');
+    }
+  }
   const roleName = privileged ? String(data.role || 'EMPLEADO').toUpperCase() : 'EMPLEADO';
   const role = await roleService.findByName(roleName);
   if (!role) throw new ApiError(400, 'Rol inválido', 'INVALID_ROLE');
@@ -51,9 +67,11 @@ async function register(data, ip) {
     throw new ApiError(409, 'Email ya registrado', 'EMAIL_TAKEN');
   }
   const passwordHash = await bcrypt.hash(data.password, 12);
-  const user = await userRepo.create({
+  const user = commercialRegistration ? await require('../commercial/service').registerAccount(data, passwordHash) : await userRepo.create({
     name: data.name, email: data.email.toLowerCase(), passwordHash,
-    role: role.name, companyId: privileged ? (data.companyId || undefined) : undefined
+    role: role.name, companyId: privileged ? (data.companyId || undefined) : undefined,
+    commercialAccount: commercialRegistration,
+    ...(commercialRegistration ? { termsAcceptance: { version: data.termsVersion, acceptedAt: new Date() } } : {})
   });
   const refreshToken = signRefresh(user);
   await userRepo.update(user._id, { refreshTokenHash: sha256(refreshToken) });
@@ -119,7 +137,9 @@ async function forgotPassword(email) {
   if (!user || !user.active) return { ok: true };
   const token = crypto.randomBytes(32).toString('hex');
   await userRepo.update(user._id, { resetTokenHash: sha256(token), resetExpires: new Date(Date.now() + 3600e3) });
-  await sendPasswordReset(user.email, token);
+  if (user.commercialAccount) {
+    await require('../commercial/mail').enqueue(user.email, 'Recuperar contraseña', env.frontendUrl + '/#reset?token=' + token);
+  } else await sendPasswordReset(user.email, token);
   if (env.env !== 'test') return { ok: true };
   return { ok: true, resetToken: token };
 }

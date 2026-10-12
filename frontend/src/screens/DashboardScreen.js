@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Text, ScrollView } from '../design/ui';
 import { useAuth } from '../context/AuthContext';
 import { dashboardApi } from '../services/api';
-import { MENU_BY_PERMISSION } from '../constants/config';
+import { MENU_BY_PERMISSION, canOpenMenu } from '../constants/config';
 import { tokens } from '../theme/tokens';
 import AppShell from '../components/layout/AppShell';
 import PageHeader from '../components/layout/PageHeader';
@@ -26,15 +26,28 @@ import AdminScreen from './admin/AdminScreen';
 import AuditScreen from './audit/AuditScreen';
 import AIAssistantScreen from './AIAssistantScreen';
 
+const readModule = () => Platform.OS === 'web' && typeof window !== 'undefined' ?
+  new URLSearchParams(window.location.hash.slice(1)).get('module') || 'dashboard' : 'dashboard';
+
 export default function DashboardScreen() {
   const { user, has } = useAuth();
-  const [currentRoute, setCurrentRoute] = useState('dashboard');
+  const [currentRoute, setCurrentRoute] = useState(readModule);
+  const selectRoute = route => {
+    setCurrentRoute(route);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.location.hash = `module=${route}`;
+  };
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const update = () => setCurrentRoute(readModule());
+    window.addEventListener('hashchange', update);
+    return () => window.removeEventListener('hashchange', update);
+  }, []);
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (currentRoute === 'dashboard') {
+    if (currentRoute === 'dashboard' || !summary) {
       loadDashboard();
     }
   }, [currentRoute]);
@@ -52,36 +65,40 @@ export default function DashboardScreen() {
     }
   };
 
-  const menu = MENU_BY_PERMISSION.filter((m) => m.route !== 'dashboard' && (!m.permission || has(m.permission)) && (!['hr', 'projects', 'production', 'ai'].includes(m.route) || summary?.enabledModules?.includes(m.route)));
+  const menu = MENU_BY_PERMISSION.filter((m) => m.route !== 'dashboard' && canOpenMenu(m, has) && (!summary?.allowedModules || ['admin', 'settings', 'audit'].includes(m.route) || summary.allowedModules.includes(m.route)) && (!['hr', 'projects', 'production', 'ai'].includes(m.route) || summary?.enabledModules?.includes(m.route)));
 
   const renderContent = () => {
+    if (currentRoute !== 'dashboard' && !menu.some(item => item.route === currentRoute)) {
+      if (loading || !summary && !error) return <LoadingSkeleton />;
+      return <ErrorState message={error || 'Este módulo no está disponible para tu cuenta.'} onRetry={() => selectRoute('dashboard')} />;
+    }
     switch (currentRoute) {
       case 'products':
-        return <ProductsScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <ProductsScreen onBack={() => selectRoute('dashboard')} />;
       case 'inventory':
-        return <InventoryScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <InventoryScreen onBack={() => selectRoute('dashboard')} />;
       case 'crm':
-        return <CrmScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <CrmScreen onBack={() => selectRoute('dashboard')} />;
       case 'sales':
-        return <SalesScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <SalesScreen onBack={() => selectRoute('dashboard')} />;
       case 'purchases':
-        return <PurchasesScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <PurchasesScreen onBack={() => selectRoute('dashboard')} />;
       case 'finance':
-        return <FinanceScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <FinanceScreen onBack={() => selectRoute('dashboard')} />;
       case 'hr':
-        return <HrScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <HrScreen onBack={() => selectRoute('dashboard')} />;
       case 'projects':
-        return <ProjectsScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <ProjectsScreen onBack={() => selectRoute('dashboard')} />;
       case 'production':
-        return <ProductionScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <ProductionScreen onBack={() => selectRoute('dashboard')} />;
       case 'settings':
-        return <SettingsScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <SettingsScreen onBack={() => selectRoute('dashboard')} />;
       case 'admin':
-        return <AdminScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <AdminScreen onBack={() => selectRoute('dashboard')} />;
       case 'audit':
-        return <AuditScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <AuditScreen onBack={() => selectRoute('dashboard')} />;
       case 'ai':
-        return <AIAssistantScreen onBack={() => setCurrentRoute('dashboard')} />;
+        return <AIAssistantScreen onBack={() => selectRoute('dashboard')} />;
       default:
         break;
     }
@@ -101,10 +118,11 @@ export default function DashboardScreen() {
         {!user?.companyId && <Text style={{ padding: 16 }}>Tu cuenta está pendiente de asignación a una empresa. Contacta al administrador.</Text>}
         <View style={styles.metricsRow}>
           {summary?.sales && <MetricCard
-            title="Ventas Totales"
+            title="Total facturado"
             value={summary && summary.sales ? `$${summary.sales.totalInvoiced || 0}` : '$0'}
-            subtitle="Ingresos registrados"
+            subtitle="Documentos de venta · no equivale a cobros"
           />}
+          {summary?.sales && <MetricCard title="Total cobrado" value={summary.sales.totalPaid} subtitle="Pagos registrados · agregado sin desglose de moneda" />}
           {summary?.crm && <MetricCard
             title="Clientes Activos"
             value={summary && summary.crm ? summary.crm.activeCustomers || 0 : '0'}
@@ -126,7 +144,7 @@ export default function DashboardScreen() {
               key={item.route}
               title={item.label}
               description={`Gestionar ${item.label.toLowerCase()} y operaciones asociadas`}
-              onPress={() => setCurrentRoute(item.route)}
+              onPress={() => selectRoute(item.route)}
             />
           ))}
         </View>
@@ -135,7 +153,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <AppShell visibleRoutes={['dashboard', ...menu.map(item => item.route)]} currentRoute={currentRoute} onSelectRoute={setCurrentRoute}>
+    <AppShell visibleRoutes={['dashboard', ...menu.map(item => item.route)]} currentRoute={currentRoute} onSelectRoute={selectRoute}>
       {renderContent()}
     </AppShell>
   );

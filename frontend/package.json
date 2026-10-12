@@ -9,13 +9,16 @@
     "web": "expo start --web",
     "android": "expo run:android",
     "prebuild:android": "npx expo prebuild --platform android --clean",
+    "preexport:web": "node scripts/check-runtime.cjs",
+    "verify:runtime": "node scripts/check-runtime.cjs",
     "export:web": "expo export --platform web --output-dir dist --clear",
-    "deploy:cloudflare": "npx --yes wrangler@4 deploy",
+    "postexport:web": "node scripts/release-manifest.cjs",
+    "deploy:cloudflare": "npx --yes wrangler@4.149.0 deploy",
     "ios": "expo run:ios",
     "web:render": "expo start --web --localhost --port 8086 --clear",
     "verify:web": "node scripts/verify-web-export.js",
     "lint": "eslint src App.js",
-    "test": "node --test scripts/*.test.js"
+    "test": "node --test scripts/*.test.js scripts/*.test.cjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",

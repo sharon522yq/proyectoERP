@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { authApi, setAccessToken, setRefreshToken, setOnUnauthorized, getStoredToken, setStoredToken } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -12,25 +12,34 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [permissions, setPermissions] = useState([]);
   const [ready, setReady] = useState(false);
+  const [sessionError, setSessionError] = useState('');
+  const mounted = useRef(true);
+  const restoreSession = useCallback(async () => {
+    setReady(false); setSessionError('');
+    try {
+      if (getStoredToken('erp_access_token')) {
+        const data = await authApi.me();
+        if (mounted.current) { setUser(data.user); setPermissions(data.permissions || []); }
+      }
+    } catch (error) {
+      if (!mounted.current) return;
+      if ([401, 403].includes(error.response?.status)) {
+        setAccessToken(null); setRefreshToken(null); setUser(null); setPermissions([]);
+        setStoredToken(STORAGE_KEYS.USER, null); setStoredToken(STORAGE_KEYS.PERMISSIONS, null);
+      } else setSessionError('No se pudo comprobar tu sesión. Conservamos el acceso; reintenta cuando el servidor responda.');
+    } finally { if (mounted.current) setReady(true); }
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const access = getStoredToken('erp_access_token');
-      if (access) {
-        try {
-          const data = await authApi.me();
-          if (mounted) { setUser(data.user); setPermissions(data.permissions || []); }
-        } catch { setAccessToken(null); setRefreshToken(null); }
-      }
-      if (mounted) setReady(true);
-    })();
-    return () => { mounted = false; };
-  }, []);
+    mounted.current = true;
+    restoreSession();
+    return () => { mounted.current = false; };
+  }, [restoreSession]);
 
   if (typeof setOnUnauthorized === 'function') {
     setOnUnauthorized(() => {
       setUser(null);
+      setSessionError('');
       setPermissions([]);
       setStoredToken(STORAGE_KEYS.USER, null);
       setStoredToken(STORAGE_KEYS.PERMISSIONS, null);
@@ -38,8 +47,14 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(() => ({
-    user, permissions, ready,
+    user, permissions, ready, sessionError, retrySession: restoreSession,
     has: (p) => permissions.includes('*') || permissions.includes(p),
+    refreshProfile: async () => {
+      const data = await authApi.me();
+      setUser(data.user); setPermissions(data.permissions || []);
+      setStoredToken(STORAGE_KEYS.USER, JSON.stringify(data.user));
+      setStoredToken(STORAGE_KEYS.PERMISSIONS, JSON.stringify(data.permissions || []));
+    },
     login: async (email, password) => {
       const data = await authApi.login(email, password);
       setAccessToken(data.accessToken);
@@ -63,11 +78,12 @@ export function AuthProvider({ children }) {
       setAccessToken(null);
       setRefreshToken(null);
       setUser(null);
+      setSessionError('');
       setPermissions([]);
       setStoredToken(STORAGE_KEYS.USER, null);
       setStoredToken(STORAGE_KEYS.PERMISSIONS, null);
     }
-  }), [user, permissions, ready]);
+  }), [user, permissions, ready, sessionError, restoreSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

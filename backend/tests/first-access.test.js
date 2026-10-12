@@ -1,0 +1,58 @@
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
+const mongoose = require('mongoose');
+const request = require('supertest');
+const crypto = require('crypto');
+const { initialize } = require('../src/modules/initialization/firstAccess.service');
+const { seedDevelopmentFixtures } = require('../src/modules/initialization/developmentFixtures');
+const User = require('../src/modules/users/user.model');
+const Company = require('../src/modules/companies/company.model');
+const Marker = require('../src/modules/initialization/firstAccess.model');
+const Grant = require('../src/modules/initialization/accessGrant.model');
+const { Payment, Contract, Membership } = require('../src/modules/commercial/models');
+let mongo, app;
+const input = { target: 'development', email: 'owner@example.invalid', name: 'Synthetic QA', companyName: 'Synthetic QA company', password: crypto.randomBytes(24).toString('hex'), reason: 'Isolated automated development validation', expiresAt: new Date(Date.now() + 86400000) };
+beforeAll(async () => {
+  process.env.DEVELOPMENT_FIXTURES_ENABLED = 'true';
+  mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+  await mongoose.connect(mongo.getUri());
+  app = require('../src/app').createApp();
+});
+afterAll(async () => { await mongoose.disconnect(); if (mongo) await mongo.stop(); });
+test('atomic first account, idempotence, fixtures, real access and revocation', async () => {
+  const result = await initialize(input);
+  expect(result.created).toBe(true);
+  expect((await initialize(input)).created).toBe(false);
+  expect(await User.countDocuments()).toBe(1);
+  expect(await User.countDocuments({ role: 'SUPER_ADMIN' })).toBe(0);
+  expect(await Membership.countDocuments()).toBe(1);
+  expect(await Payment.countDocuments()).toBe(0);
+  expect(await Contract.countDocuments()).toBe(0);
+  expect((await seedDevelopmentFixtures(result.companyId)).seeded).toBe(true);
+  expect((await seedDevelopmentFixtures(result.companyId)).seeded).toBe(false);
+  await expect(initialize({ ...input, companyName: 'Conflicting company' })).rejects.toMatchObject({ code: 'FIRST_ACCESS_CONFLICT' });
+  const login = await request(app).post('/api/v1/auth/login').send({ email: input.email, password: input.password });
+  expect(login.status).toBe(200);
+  const token = login.body.data.accessToken;
+  const call = path => request(app).get('/api/v1/' + path).set('Authorization', 'Bearer ' + token);
+  expect((await call('commercial/memberships')).status).toBe(200);
+  expect((await request(app).post('/api/v1/commercial/switch-company').set('Authorization', 'Bearer ' + token).send({ companyId: result.companyId })).status).toBe(200);
+  expect((await call('dashboard')).status).toBe(200);
+  expect((await call('products')).status).toBe(200);
+  expect((await call('auth/me')).status).toBe(200);
+  await Grant.updateOne({}, { $set: { expiresAt: new Date(0) } });
+  expect((await call('dashboard')).status).toBe(403);
+  await Grant.updateOne({}, { $set: { expiresAt: input.expiresAt } });
+  expect((await request(app).post('/api/v1/auth/logout').set('Authorization', 'Bearer ' + token).send({ refreshToken: login.body.data.refreshToken })).status).toBe(200);
+  expect((await call('auth/me')).status).toBe(401);
+});
+test('existing company rejects bootstrap without partial records', async () => {
+  await mongoose.connection.dropDatabase();
+  await Company.create({ name: 'Existing destination' });
+  await expect(initialize(input)).rejects.toMatchObject({ code: 'DESTINATION_NOT_EMPTY' });
+  expect(await User.countDocuments()).toBe(0);
+  expect(await Marker.countDocuments()).toBe(0);
+  expect(await Grant.countDocuments()).toBe(0);
+});
+test('production target cannot execute in a development process', async () => {
+  await expect(initialize({ ...input, target: 'production' })).rejects.toMatchObject({ code: 'TARGET_ENVIRONMENT_MISMATCH' });
+});

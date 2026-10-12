@@ -14,6 +14,7 @@ const movementSchema = new mongoose.Schema({
   previousStock: { type: Number, required: true },
   newStock: { type: Number, required: true },
   reason: { type: String, trim: true, maxlength: 500 },
+  requestId: { type: String, maxlength: 100 },
   referenceType: { type: String, trim: true },
   referenceId: { type: mongoose.Schema.Types.ObjectId },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -22,5 +23,6 @@ const movementSchema = new mongoose.Schema({
 
 movementSchema.index({ companyId: 1, createdAt: -1 });
 movementSchema.index({ companyId: 1, productId: 1, createdAt: -1 });
+movementSchema.index({ companyId: 1, requestId: 1 }, { unique: true, partialFilterExpression: { requestId: { $type: 'string' } } });
 
 module.exports = mongoose.models.InventoryMovement || mongoose.model('InventoryMovement', movementSchema);

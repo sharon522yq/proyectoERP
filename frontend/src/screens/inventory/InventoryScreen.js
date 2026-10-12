@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, TextInput, TouchableOpacity, ScrollView, Button, Modal } from '../../design/ui';
 import WarehouseDetail from './WarehouseDetail';
@@ -23,6 +23,8 @@ export default function InventoryScreen({ onBack }) {
   const [warehouseName, setWarehouseName] = useState('');
   const [warehouseCode, setWarehouseCode] = useState('');
   const [saving, setSaving] = useState(false);
+  const adjustmentPending = useRef(false);
+  const adjustmentRequest = useRef(null);
   const [stockList, setStockList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -56,29 +58,40 @@ export default function InventoryScreen({ onBack }) {
   };
 
   const handleAdjust = async () => {
-    if (saving) return;
+    if (adjustmentPending.current) return;
     if (!productId || !warehouseId || !Number.isInteger(Number(quantity)) || Number(quantity) === 0 || !reason.trim()) {
       setFormError('Todos los campos incluyendo el motivo son obligatorios');
       return;
     }
     try {
+      const payload = { productId: productId.trim(), warehouseId: warehouseId.trim(), quantity: Math.abs(Number(quantity)),
+        type: Number(quantity) < 0 ? 'SALE_EXIT' : 'ADJUSTMENT', reason: reason.trim() };
+      if (adjustmentRequest.current && adjustmentRequest.current.payload !== JSON.stringify(payload)) {
+        setFormError('Hay un envío sin confirmar. Reintenta con los mismos datos o consulta el historial antes de crear otro movimiento.'); return;
+      }
+      adjustmentPending.current = true;
+      if (!adjustmentRequest.current) adjustmentRequest.current = {
+        id: `stock-${Date.now()}-${Math.random().toString(36).slice(2)}`, payload: JSON.stringify(payload)
+      };
       setFormError(''); setSaving(true);
       await inventoryApi.adjustStock({
         productId: productId.trim(),
         warehouseId: warehouseId.trim(),
         quantity: Math.abs(Number(quantity)),
         type: Number(quantity) < 0 ? 'SALE_EXIT' : 'ADJUSTMENT',
-        reason: reason.trim()
+        reason: reason.trim(), requestId: adjustmentRequest.current.id
       });
       setModalVisible(false);
       setProductId('');
       setWarehouseId('');
       setQuantity('');
       setReason('');
+      adjustmentRequest.current = null;
       loadStock();
     } catch (err) {
+      if ([400, 401, 403, 404].includes(err.response?.status)) adjustmentRequest.current = null;
       setFormError((err.response && err.response.data && err.response.data.message) || 'Error al ajustar stock');
-    } finally { setSaving(false); }
+    } finally { adjustmentPending.current = false; setSaving(false); }
   };
 
   if (selectedWarehouse) return <WarehouseDetail warehouse={selectedWarehouse} products={products} onBack={() => setSelectedWarehouse(null)} onChanged={loadStock} onAdjust={id => { setSelectedWarehouse(null); setWarehouseId(id); setFormError(''); setModalVisible(true); }} />;
