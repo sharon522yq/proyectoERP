@@ -30,4 +30,3 @@ async function seedDevelopmentFixtures(companyId) {
   } finally { await session.endSession(); }
 }
 module.exports = { seedDevelopmentFixtures };
-
