@@ -4,7 +4,8 @@ const models = [
   require('../src/modules/inventory/inventory.model'),
   require('../src/modules/inventory/movement.model'),
   require('../src/modules/sales/payment.model'),
-  require('../src/modules/finance/transaction.model')
+  require('../src/modules/finance/transaction.model'),
+  ...Object.values(require('../src/modules/commercial/models'))
 ];
 
 async function inspectReleaseDatabase(connection) {

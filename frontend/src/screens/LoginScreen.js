@@ -7,7 +7,7 @@ import { tokens } from '../theme/tokens';
 import LoginArtwork from '../components/branding/LoginArtwork';
 import AppWordmark from '../components/branding/AppWordmark';
 
-export default function LoginScreen() {
+export default function LoginScreen({ onAbout } = {}) {
   const { login, register } = useAuth();
   const initialToken = Platform.OS === 'web' && typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search).get('resetToken') || '' : '';
   const [mode, setMode] = useState(initialToken ? 'reset' : 'login');
@@ -141,6 +141,7 @@ export default function LoginScreen() {
               <Text style={[styles.label, { color: tokens.colors.blueAccent, textAlign: 'center' }]}>{label}</Text>
             </TouchableOpacity>
           ))}
+          {onAbout && mode === 'login' && <TouchableOpacity onPress={onAbout} disabled={loading} accessibilityRole="button"><Text style={[styles.label, { color: tokens.colors.blueAccent, textAlign: 'center' }]}>Conocer NexusERP</Text></TouchableOpacity>}
         </View>
       </View>
       {wide && <LoginArtwork />}

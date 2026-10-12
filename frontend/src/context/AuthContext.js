@@ -49,6 +49,12 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({
     user, permissions, ready, sessionError, retrySession: restoreSession,
     has: (p) => permissions.includes('*') || permissions.includes(p),
+    refreshProfile: async () => {
+      const data = await authApi.me();
+      setUser(data.user); setPermissions(data.permissions || []);
+      setStoredToken(STORAGE_KEYS.USER, JSON.stringify(data.user));
+      setStoredToken(STORAGE_KEYS.PERMISSIONS, JSON.stringify(data.permissions || []));
+    },
     login: async (email, password) => {
       const data = await authApi.login(email, password);
       setAccessToken(data.accessToken);

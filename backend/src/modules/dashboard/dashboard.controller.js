@@ -17,10 +17,10 @@ const getDashboard = asyncHandler(async (req, res) => {
   ];
   const enabledModules = c.companyId ? await require('../../middlewares/modules').enabledModules(c.companyId) : [];
   const optional = require('../../middlewares/modules').OPTIONAL_MODULES;
-  const data = c.companyId ? { enabledModules } : {};
+  const data = c.companyId ? { enabledModules, ...(req.user.moduleEntitlements ? { allowedModules: req.user.moduleEntitlements } : {}) } : {};
   if (c.companyId) {
     for (const [name, permissions, load] of specs) {
-      if ((!optional.includes(name) || enabledModules.includes(name)) && permissions.every(permission => hasPermission(req.user.permissions, permission))) data[name] = await load();
+      if ((!req.user.moduleEntitlements || req.user.moduleEntitlements.includes(name)) && (!optional.includes(name) || enabledModules.includes(name)) && permissions.every(permission => hasPermission(req.user.permissions, permission))) data[name] = await load();
     }
   }
   res.json({ success: true, data });

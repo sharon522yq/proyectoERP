@@ -65,7 +65,7 @@ export default function DashboardScreen() {
     }
   };
 
-  const menu = MENU_BY_PERMISSION.filter((m) => m.route !== 'dashboard' && canOpenMenu(m, has) && (!['hr', 'projects', 'production', 'ai'].includes(m.route) || summary?.enabledModules?.includes(m.route)));
+  const menu = MENU_BY_PERMISSION.filter((m) => m.route !== 'dashboard' && canOpenMenu(m, has) && (!summary?.allowedModules || ['admin', 'settings', 'audit'].includes(m.route) || summary.allowedModules.includes(m.route)) && (!['hr', 'projects', 'production', 'ai'].includes(m.route) || summary?.enabledModules?.includes(m.route)));
 
   const renderContent = () => {
     if (currentRoute !== 'dashboard' && !menu.some(item => item.route === currentRoute)) {

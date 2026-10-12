@@ -60,6 +60,11 @@ function createApp() {
     else cb(null, false);
   }}));
 
+  app.post('/api/v1/commercial/webhook', express.raw({ type: 'application/json', limit: '1mb' }),
+    require('./utils/ApiError').asyncHandler(async (req, res) => {
+      const event = require('./modules/commercial/provider').verifyWebhook(req.body, req.headers['stripe-signature']);
+      res.json(await require('./modules/commercial/service').webhook(event));
+    }));
   app.use(express.json({ limit: '1mb' }));
   if (env.env !== 'test') app.use(morgan('dev'));
 
@@ -86,7 +91,12 @@ function createApp() {
     success: true,
     service: serviceInfo.service,
     version: appVersion,
-    commit: env.gitCommit || undefined
+    commit: env.gitCommit || undefined,
+    ...((env.env !== 'production' || process.env.INTERNAL_ACCESS_ENABLED === 'true') ? {
+      environment: env.env, privateInitialization: 'first-access-v1',
+      internalAccessEnabled: process.env.INTERNAL_ACCESS_ENABLED === 'true',
+      databaseIdentity: require('./modules/initialization/databaseIdentity').databaseIdentity()
+    } : {})
   }));
   app.get(['/api', '/api/v1'], (req, res) => res.json({
     success: true,
@@ -98,6 +108,8 @@ function createApp() {
 
   // Swagger docs
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customSiteTitle: 'ERP API Docs' }));
+
+  app.use('/api/v1/commercial', require('./modules/commercial/routes'));
 
   // Core
   app.use('/api/v1/auth', authRoutes);

@@ -19,7 +19,8 @@ async function main() {
     require('./modules/finance/transaction.model').init(),
     require('./modules/inventory/inventory.model').init(),
     require('./modules/inventory/movement.model').init(),
-    require('./modules/audit/audit.model').init()
+    require('./modules/audit/audit.model').init(),
+    ...Object.values(require('./modules/commercial/models')).map(model => model.init())
   ]);
   await ensureSeeded();
   await seedUnits();

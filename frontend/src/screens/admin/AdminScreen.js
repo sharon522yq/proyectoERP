@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, ScrollView, Button } from '../../design/ui';
+import { Text, TextInput, ScrollView, Button } from '../../design/ui';
 import { useAuth } from '../../context/AuthContext';
 import { adminApi } from '../../services/api';
+import api from '../../services/api';
 import { tokens } from '../../theme/tokens';
 import PageHeader from '../../components/layout/PageHeader';
 import LoadingSkeleton from '../../components/data-display/LoadingSkeleton';
@@ -15,6 +16,20 @@ export default function AdminScreen({ onBack }) {
   const [companies, setCompanies] = useState([]);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('EMPLEADO');
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
+  const invitePending = useRef(false);
+  const invite = async () => {
+    if (invitePending.current) return;
+    invitePending.current = true; setSendingInvite(true); setActionError(''); setInviteMessage('');
+    try {
+      await api.post('/commercial/invitations', { email: inviteEmail.trim(), role: inviteRole });
+      setInviteEmail(''); setInviteMessage('Invitación registrada para envío. La persona debe abrir el enlace recibido en el correo invitado.');
+    } catch (failure) { setActionError(failure.response?.data?.message || 'No se pudo registrar la invitación.'); }
+    finally { invitePending.current = false; setSendingInvite(false); }
+  };
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,6 +64,15 @@ export default function AdminScreen({ onBack }) {
     <View style={styles.container}>
       <PageHeader title="Administración de Usuarios y Roles" subtitle="Control de accesos y RBAC" />
       <View style={styles.toolbar}>{onBack ? <Button title="Volver" onPress={onBack} /> : null}</View>
+      {has('users.create') && user.companyId && !user.firstAccess?.mode && <View style={[styles.card, { gap: 12 }]}>
+        <Text style={styles.titleText}>Invitar a una persona</Text>
+        <TextInput accessibilityLabel="Correo de la invitación" value={inviteEmail} onChangeText={setInviteEmail} autoCapitalize="none" keyboardType="email-address" editable={!sendingInvite} placeholder="nombre@empresa.com" />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {['EMPLEADO', 'VENTAS', 'GERENTE', 'FINANZAS', 'COMPRAS', 'ALMACEN', 'RRHH', 'PRODUCCION'].map(role => <Button key={role} title={role} variant={role === inviteRole ? 'primary' : 'secondary'} onPress={() => setInviteRole(role)} disabled={sendingInvite} />)}
+        </View>
+        <Button title="Enviar invitación" onPress={invite} loading={sendingInvite} disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail.trim())} />
+        {!!inviteMessage && <Text accessibilityLiveRegion="polite">{inviteMessage}</Text>}
+      </View>}
 
       {!!actionError && <Text accessibilityRole="alert" style={{ color: tokens.colors.error }}>{actionError}</Text>}
       {loading ? (
