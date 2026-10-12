@@ -11,11 +11,14 @@ async function main() {
     process.exit(1);
   }
   await connectDB(env.mongoUri);
+  const topology = await require('mongoose').connection.db.admin().command({ hello: 1 });
+  if (!topology.setName && topology.msg !== 'isdbgrid') throw new Error('NexusERP requiere MongoDB con soporte de transacciones (replica set o clúster sharded).');
   // Serve mutations only after the uniqueness and stock indexes are ready.
   await Promise.all([
     require('./modules/sales/payment.model').init(),
     require('./modules/finance/transaction.model').init(),
     require('./modules/inventory/inventory.model').init(),
+    require('./modules/inventory/movement.model').init(),
     require('./modules/audit/audit.model').init()
   ]);
   await ensureSeeded();

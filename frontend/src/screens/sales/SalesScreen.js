@@ -13,10 +13,11 @@ import { invoiceHtml, invoiceText, money } from './invoiceDocument';
 const rows = data => data?.items || (Array.isArray(data) ? data : []);
 const labels = { DRAFT: 'Borrador', SENT: 'Enviada', APPROVED: 'Aprobada', CONVERTED: 'Convertida', CONFIRMED: 'Confirmado', PREPARING: 'En preparación', SHIPPED: 'Enviado', DELIVERED: 'Entregado', CANCELLED: 'Cancelado', PAID: 'Pagada', PARTIAL: 'Pago parcial', OVERDUE: 'Vencida' };
 const blankLine = () => ({ productId: '', quantity: '1', unitPrice: '', taxRate: '0' });
+const tabPermission = key => `sales.${key}.read`;
 
 export default function SalesScreen({ onBack }) {
   const { has } = useAuth();
-  const [tab, setTab] = useState('quotes');
+  const [tab, setTab] = useState(() => ['quotes', 'orders', 'invoices'].find(key => has(tabPermission(key))) || 'invoices');
   const [data, setData] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -65,6 +66,7 @@ export default function SalesScreen({ onBack }) {
   }
 
   async function load(currentTab = tab, currentPage = page) {
+    if (!has(tabPermission(currentTab))) { setData([]); setTotal(0); return; }
     const version = ++requestVersion.current;
     try {
       setError('');
@@ -81,6 +83,7 @@ export default function SalesScreen({ onBack }) {
     try {
       const result = await work();
       setMessage(success);
+      if (!has(tabPermission(nextTab))) nextTab = tab;
       if (nextTab !== tab || page !== 1) { setTab(nextTab); setPage(1); }
       else await load(nextTab, 1);
       return result;

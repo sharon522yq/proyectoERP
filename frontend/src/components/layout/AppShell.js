@@ -25,6 +25,7 @@ export default function AppShell({
   const [open, setOpen] = useState(false);
   const backAction = useRef(null);
   useEffect(() => {
+    if (Platform.OS !== "android") return;
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {

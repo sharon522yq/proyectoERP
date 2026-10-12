@@ -7,20 +7,20 @@ const getDashboard = asyncHandler(async (req, res) => {
   const c = ctx(req);
   const { hasPermission } = require('../../middlewares/auth');
   const specs = [
-    ['sales', 'sales.invoices.read', () => svc.getSalesSummary(c.companyId, req.query)],
-    ['inventory', 'inventory.read', () => svc.getInventorySummary(c.companyId)],
-    ['finance', 'finance.accounts.read', () => svc.getFinanceSummary(c.companyId)],
-    ['production', 'production.orders.read', () => svc.getProductionSummary(c.companyId)],
-    ['projects', 'projects.read', () => svc.getProjectSummary(c.companyId)],
-    ['crm', 'crm.leads.read', () => svc.getCRMSummary(c.companyId)],
-    ['hr', 'hr.employees.read', () => svc.getHRSummary(c.companyId)]
+    ['sales', ['sales.invoices.read', 'sales.payments.read'], () => svc.getSalesSummary(c.companyId, req.query)],
+    ['inventory', ['inventory.read', 'products.read'], () => svc.getInventorySummary(c.companyId)],
+    ['finance', ['finance.accounts.read'], () => svc.getFinanceSummary(c.companyId)],
+    ['production', ['production.orders.read'], () => svc.getProductionSummary(c.companyId)],
+    ['projects', ['projects.read', 'projects.tasks.read'], () => svc.getProjectSummary(c.companyId)],
+    ['crm', ['crm.leads.read', 'crm.customers.read'], () => svc.getCRMSummary(c.companyId)],
+    ['hr', ['hr.employees.read', 'hr.departments.read'], () => svc.getHRSummary(c.companyId)]
   ];
   const enabledModules = c.companyId ? await require('../../middlewares/modules').enabledModules(c.companyId) : [];
   const optional = require('../../middlewares/modules').OPTIONAL_MODULES;
   const data = c.companyId ? { enabledModules } : {};
   if (c.companyId) {
-    for (const [name, permission, load] of specs) {
-      if ((!optional.includes(name) || enabledModules.includes(name)) && hasPermission(req.user.permissions, permission)) data[name] = await load();
+    for (const [name, permissions, load] of specs) {
+      if ((!optional.includes(name) || enabledModules.includes(name)) && permissions.every(permission => hasPermission(req.user.permissions, permission))) data[name] = await load();
     }
   }
   res.json({ success: true, data });

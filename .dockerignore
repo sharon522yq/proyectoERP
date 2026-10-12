@@ -1,4 +1,7 @@
 .git
+.local
+outputs
+*-audit.json
 .github
 .idea
 node_modules

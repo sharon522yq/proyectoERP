@@ -9,8 +9,10 @@ const updateWarehouse = [param('id').isMongoId(), body('name').optional().isStri
 const adjustStock = [
   body('productId').isMongoId(),
   body('warehouseId').isMongoId(),
-  body('quantity').isInt({ min: 1 }),
+  body('quantity').isInt({ min: 1 }).toInt(),
   body('type').isIn(['PURCHASE_ENTRY', 'SALE_EXIT', 'TRANSFER', 'ADJUSTMENT', 'RETURN', 'INITIAL_STOCK']),
+  body('requestId').optional().isString().trim().isLength({ min: 1, max: 100 }),
+  body('reason').optional().isString().trim().isLength({ max: 500 }),
 ];
 const idParam = [param('id').isMongoId()];
 

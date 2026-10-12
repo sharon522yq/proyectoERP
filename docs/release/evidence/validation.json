@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-12",
+  "baseCommit": "9922e2a2a2bd9a9e6d4c1809eb25d1c81f24e774",
+  "backend": { "suites": 29, "tests": 264, "failed": 0, "releaseRegressionTests": 8, "lint": "passed" },
+  "frontend": { "tests": 44, "failed": 0, "lint": "passed", "reactRuntime": "passed", "webExport": "passed", "androidExport": "passed" },
+  "browser": { "desktopLogin": "passed", "mobileWidth": 390, "mobileHeight": 844, "registerNavigation": "passed", "finalConsoleErrors": 0, "realAccountLogin": "not tested" },
+  "cloudflareDryRun": "passed; no deployment",
+  "backendProductionInstall": { "packages": 300, "startup": "passed", "auditVulnerabilities": 0, "dockerLinuxBuild": "pending CI; Docker unavailable locally" },
+  "productionDatabasePreflight": "prepared; not executed on destination",
+  "productionWrites": 0,
+  "residualToolingAdvisories": ["GHSA-vfj7-8cjw-p6xm", "GHSA-86w9-cpqp-85rv", "GHSA-hp3w-g68c-fv3c"]
+}

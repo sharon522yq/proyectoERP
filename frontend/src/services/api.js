@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import { API_URL } from '../constants/config';
+import { loginRequest } from './authTransport';
 
 const api = axios.create({ baseURL: API_URL, timeout: 20000 });
 
@@ -64,17 +65,19 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
-    if (err.response && err.response.status === 401 && !original._retry && (!original.url.includes('/auth/') || original.url === '/auth/me') && refreshTokenValue) {
+    if (err.response && err.response.status === 401 && original && !original._retry && (!original.url.includes('/auth/') || original.url === '/auth/me') && refreshTokenValue) {
       original._retry = true;
       if (!refreshPromise) {
-        refreshPromise = axios.post(`${API_URL}/auth/refresh`, { refreshToken: refreshTokenValue })
+        refreshPromise = axios.post(`${API_URL}/auth/refresh`, { refreshToken: refreshTokenValue }, { timeout: 90000 })
           .then((r) => {
-            const { accessToken: newAccess, refreshToken: newRefresh } = r.data.data;
+            const { accessToken: newAccess, refreshToken: newRefresh } = r.data?.data || {};
+            if (!newAccess || !newRefresh) throw Object.assign(new Error('Respuesta incompleta de sesión'), { response: { status: 502 } });
             setAccessToken(newAccess);
             setRefreshToken(newRefresh);
             return newAccess;
           })
-          .catch(() => {
+          .catch((error) => {
+            if (!error.response || error.response.status >= 500) throw error;
             setAccessToken(null);
             setRefreshToken(null);
             setStoredToken(STORAGE_KEYS.USER, null);
@@ -90,7 +93,7 @@ api.interceptors.response.use(
         return api(original);
       }
     }
-    if (err.response && err.response.status === 401 && onUnauthorized) {
+    if (err.response && err.response.status === 401 && (!original?.url?.includes('/auth/') || original?.url === '/auth/me') && onUnauthorized) {
       setAccessToken(null);
       setRefreshToken(null);
       onUnauthorized();
@@ -103,7 +106,7 @@ api.interceptors.response.use(
 
 export const authApi = {
   me: () => api.get('/auth/me').then(r => r.data.data),
-  login: (email, password) => api.post('/auth/login', { email, password }).then((r) => r.data.data),
+  login: (email, password) => loginRequest(api, email, password),
   register: (payload) => api.post('/auth/register', payload).then((r) => r.data.data),
   logout: (token) => api.post('/auth/logout', { refreshToken: token || refreshTokenValue }).then((r) => r.data),
   refresh: (token) => api.post('/auth/refresh', { refreshToken: token || refreshTokenValue }).then((r) => r.data.data),

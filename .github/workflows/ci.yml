@@ -47,12 +47,13 @@ jobs:
         run: npx expo export --platform android --output-dir dist-android --clear
 
       - name: Test frontend components and Workers SPA export validation
-        run: node --test frontend/scripts/*.test.js
+        run: npm --prefix frontend test
 
       - name: Validate Cloudflare deployment inputs
         run: |
           test -f frontend/dist/index.html
           test -f frontend/dist/_headers
+          test -f frontend/dist/release.json
           test ! -f frontend/dist/_redirects
           test -f frontend/wrangler.jsonc
           node -e "JSON.parse(require('fs').readFileSync('frontend/wrangler.jsonc', 'utf8'))"

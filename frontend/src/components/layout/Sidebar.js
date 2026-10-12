@@ -45,7 +45,7 @@ export default function Sidebar({
 }) {
   const menu = MENU_BY_PERMISSION.filter(
     (m) =>
-      (!m.permission || hasPermission(m.permission)) &&
+      (m.anyPermissions ? m.anyPermissions.some(hasPermission) : !m.permission || hasPermission(m.permission)) &&
       (!visibleRoutes || visibleRoutes.includes(m.route)),
   );
   return (

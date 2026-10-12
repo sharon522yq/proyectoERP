@@ -15,7 +15,7 @@ router.put('/categories/:id', requirePermission('categories.update'), v.updateCa
 router.delete('/categories/:id', requirePermission('categories.delete'), v.idParam, validate, ctrl.deleteCategory);
 
 // Products
-router.get('/', requirePermission('products.read'), ctrl.listProducts);
+router.get('/', requirePermission('products.read'), v.listProducts, validate, ctrl.listProducts);
 router.post('/', requirePermission('products.create'), v.createProduct, validate, ctrl.createProduct);
 router.get('/:id', requirePermission('products.read'), v.idParam, validate, ctrl.getProduct);
 router.put('/:id', requirePermission('products.update'), v.updateProduct, validate, ctrl.updateProduct);

@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "test": "jest --runInBand --detectOpenHandles",
     "lint": "eslint src --ext .js",
-    "setup:owner": "node scripts/initialize-owner.js"
+    "setup:owner": "node scripts/initialize-owner.js",
+    "release:preflight": "node scripts/release-preflight.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

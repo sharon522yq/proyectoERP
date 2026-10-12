@@ -51,12 +51,25 @@ async function deleteWarehouse(id, ctx) {
 async function getStock(ctx, query) { return repo.listStock(ctx.companyId, query); }
 
 async function adjustStock(productId, warehouseId, quantity, type, reason, ctx, reference = {}) {
+  if (!Number.isFinite(quantity) || quantity <= 0) throw new ApiError(400, 'Cantidad inválida', 'VALIDATION_ERROR');
+  if (type === 'TRANSFER') throw new ApiError(400, 'La transferencia necesita origen y destino vinculados; esta operación no está habilitada.', 'TRANSFER_NOT_SUPPORTED');
+  if (!['PURCHASE_ENTRY', 'SALE_EXIT', 'ADJUSTMENT', 'RETURN', 'INITIAL_STOCK'].includes(type)) throw new ApiError(400, 'Tipo de movimiento inválido', 'VALIDATION_ERROR');
   const product = await productRepo.findById(productId);
-  if (!product || String(product.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Producto no encontrado', 'PRODUCT_NOT_FOUND');
+  if (!product || product.status !== 'ACTIVE' || String(product.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Producto activo no encontrado', 'PRODUCT_NOT_FOUND');
   const wh = await repo.findWarehouseById(warehouseId);
   if (!wh || String(wh.companyId) !== String(ctx.companyId)) throw new ApiError(404, 'Almacén no encontrado', 'WAREHOUSE_NOT_FOUND');
 
   if (!wh.active) throw new ApiError(409, 'El almacén está desactivado', 'WAREHOUSE_INACTIVE');
+  if (reference.requestId) {
+    const previous = await require('./movement.model').findOne({ companyId: ctx.companyId, requestId: reference.requestId });
+    if (previous) {
+      if (String(previous.productId) !== String(productId) || String(previous.warehouseId) !== String(warehouseId) ||
+          previous.type !== type || previous.quantity !== quantity || (previous.reason || '') !== (reason || '').trim()) {
+        throw new ApiError(409, 'Este identificador ya corresponde a otro movimiento. Consulta el historial.', 'REQUEST_CONFLICT');
+      }
+      return repo.findStock(ctx.companyId, warehouseId, productId);
+    }
+  }
   const delta = ['SALE_EXIT', 'TRANSFER'].includes(type) ? -Math.abs(quantity) : Math.abs(quantity);
   const updated = await repo.upsertStock(ctx.companyId, warehouseId, productId, delta);
   const newStock = updated.quantity;
@@ -65,10 +78,11 @@ async function adjustStock(productId, warehouseId, quantity, type, reason, ctx, 
     companyId: ctx.companyId, warehouseId, productId, type,
     quantity: Math.abs(quantity), previousStock: prevStock, newStock,
     reason, userId: ctx.userId,
+    requestId: reference.requestId,
     referenceType: reference.referenceType, referenceId: reference.referenceId
   });
 
-  await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'UPDATE', module: 'inventory', documentId: String(productId), previousStock: prevStock, newStock, ip: ctx.ip });
+  await logAudit({ userId: ctx.userId, companyId: ctx.companyId, action: 'UPDATE', module: 'inventory', documentId: String(productId), previousData: { quantity: prevStock }, newData: { quantity: newStock, requestId: reference.requestId }, ip: ctx.ip });
   return updated;
 }
 

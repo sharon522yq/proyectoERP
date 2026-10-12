@@ -15,6 +15,9 @@ const authenticate = asyncHandler(async (req, res, next) => {
   if (!user || !user.active || (payload.version || 0) !== (user.sessionVersion || 0)) {
     throw new ApiError(401, 'Sesión inválida o expirada', 'AUTH_INVALID');
   }
+  if (String(payload.companyId || '') !== String(user.companyId || '')) {
+    throw new ApiError(401, 'La empresa de esta sesión cambió. Inicia sesión nuevamente.', 'SESSION_CONTEXT_CHANGED');
+  }
   const role = await roleService.findByName(user.role);
   req.user = { id: String(user._id), role: user.role, companyId: user.companyId ? String(user.companyId) : null, permissions: role ? role.permissions.filter(p => (payload.permissions || []).includes('*') || (payload.permissions || []).includes(p)) : [] };
   return next();

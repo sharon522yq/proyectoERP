@@ -12,7 +12,7 @@ const updateWarehouse = asyncHandler(async (req, res) => { res.json({ success: t
 const deleteWarehouse = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.deleteWarehouse(req.params.id, ctx(req)) }); });
 // Stock
 const getStock = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.getStock(ctx(req), req.query) }); });
-const adjustStock = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.adjustStock(req.body.productId, req.body.warehouseId, req.body.quantity, req.body.type, req.body.reason, ctx(req)) }); });
+const adjustStock = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.adjustStock(req.body.productId, req.body.warehouseId, req.body.quantity, req.body.type, req.body.reason, ctx(req), { requestId: req.body.requestId }) }); });
 
 // Movements
 const listMovements = asyncHandler(async (req, res) => { res.json({ success: true, data: await svc.listMovements(ctx(req), req.query) }); });
